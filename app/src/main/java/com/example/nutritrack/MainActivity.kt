@@ -4,32 +4,60 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedContentTransitionScope // <-- Import this
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.*
-import com.example.nutritrack.ui.theme.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
+import androidx.navigation.compose.rememberNavController
+import com.example.nutritrack.auth.LoginScreen
+import com.example.nutritrack.auth.RegisterScreen
+import com.example.nutritrack.onboarding.OnboardingNavHost
+// --- IMPORT YANG DISESUAIKAN DENGAN STRUKTUR FOLDER ANDA ---
+import com.example.nutritrack.FoodScreen
+import com.example.nutritrack.HomeScreen
+import com.example.nutritrack.ScanScreen
+import com.example.nutritrack.TipsScreen
 
-// --- Definisi Rute Navigasi (Best Practice) ---
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Home : Screen("home", "Home", Icons.Default.Home)
-    object Food : Screen("food", "Food", Icons.Default.Fastfood)
-    object Scan : Screen("scan", "Scan", Icons.Default.QrCodeScanner)
-    object Tips : Screen("tips", "Tips", Icons.Default.Lightbulb)
-    object Profile : Screen("profile", "Profile", Icons.Default.Person)
+import com.example.nutritrack.ui.theme.NutriTrackTheme
+
+// Rute global untuk navigasi utama
+object GlobalRoutes {
+    // Hapus SPLASH untuk sementara jika tidak digunakan
+    const val AUTH = "auth_route"
+    const val ONBOARDING = "onboarding_route"
+    const val MAIN_APP = "main_app_route"
 }
 
-val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips, Screen.Profile)
+// Item untuk navigasi bawah
+sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
+    data object Home : Screen("home", "Home", Icons.Default.Home)
+    data object Food : Screen("food", "Food", Icons.Default.Fastfood)
+    data object Scan : Screen("scan", "Scan", Icons.Default.QrCodeScanner)
+    data object Tips : Screen("tips", "Tips", Icons.Default.Lightbulb)
+    // Hapus Profile untuk sementara
+    // data object Profile : Screen("profile", "Profile", Icons.Default.Person)
+}
+
+// Hapus Profile dari daftar untuk sementara
+val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,42 +65,74 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             NutriTrackTheme {
-                MainApp()
+                val appNavController = rememberNavController()
+
+                // --- UBAH RUTE AWAL KE AUTH ---
+                NavHost(navController = appNavController, startDestination = GlobalRoutes.AUTH) {
+                    // 1. Alur Autentikasi (Login/Register)
+                    navigation(startDestination = "login", route = GlobalRoutes.AUTH) {
+                        composable("login") {
+                            LoginScreen(
+                                onLoginSuccess = {
+                                    appNavController.navigate(GlobalRoutes.ONBOARDING) {
+                                        // Hapus riwayat navigasi Auth agar tidak bisa kembali
+                                        popUpTo(GlobalRoutes.AUTH) { inclusive = true }
+                                    }
+                                },
+                                onNavigateToRegister = { appNavController.navigate("register") }
+                            )
+                        }
+                        composable("register") {
+                            RegisterScreen(
+                                onRegisterSuccess = {
+                                    appNavController.navigate(GlobalRoutes.ONBOARDING) {
+                                        popUpTo(GlobalRoutes.AUTH) { inclusive = true }
+                                    }
+                                },
+                                onNavigateToLogin = { appNavController.popBackStack() }
+                            )
+                        }
+                    }
+
+                    // 2. Alur Onboarding
+                    composable(GlobalRoutes.ONBOARDING) {
+                        OnboardingNavHost(onOnboardingComplete = {
+                            appNavController.navigate(GlobalRoutes.MAIN_APP) {
+                                popUpTo(GlobalRoutes.ONBOARDING) { inclusive = true }
+                            }
+                        })
+                    }
+
+                    // 3. Aplikasi Utama (Home Screen, dll.)
+                    composable(GlobalRoutes.MAIN_APP) {
+                        MainAppLayout()
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun MainApp() {
+fun MainAppLayout() {
     val navController = rememberNavController()
-
     Scaffold(
         bottomBar = {
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentDestination = navBackStackEntry?.destination
-
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+            NavigationBar {
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
                 bottomNavItems.forEach { screen ->
-                    val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = screen.label) },
                         label = { Text(screen.label) },
-                        selected = isSelected,
+                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = DarkGreen,
-                            unselectedIconColor = TextGray,
-                            selectedTextColor = DarkGreen,
-                            unselectedTextColor = TextGray,
-                            indicatorColor = LightGreen
-                        )
+                        }
                     )
                 }
             }
@@ -83,48 +143,11 @@ fun MainApp() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            val animationSpec = tween<IntOffset>(durationMillis = 350)
-
-            composable(
-                Screen.Home.route,
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec) }
-            ) { HomeScreen() }
-
-            composable(
-                Screen.Food.route,
-                enterTransition = {
-                    when (initialState.destination.route) {
-                        Screen.Home.route -> slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec)
-                        else -> slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec)
-                    }
-                },
-                exitTransition = {
-                    when (targetState.destination.route) {
-                        Screen.Home.route -> slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec)
-                        else -> slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec)
-                    }
-                }
-            ) { FoodScreen() }
-
-            composable(
-                Screen.Tips.route,
-                enterTransition = {
-                    when (initialState.destination.route) {
-                        Screen.Profile.route, Screen.Scan.route -> slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec)
-                        else -> slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec)
-                    }
-                },
-                exitTransition = {
-                    when (targetState.destination.route) {
-                        Screen.Profile.route, Screen.Scan.route -> slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec)
-                        else -> slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec)
-                    }
-                }
-            ) { TipsScreen() }
-
+            composable(Screen.Home.route) { HomeScreen() }
+            composable(Screen.Food.route) { FoodScreen() }
             composable(Screen.Scan.route) { ScanScreen() }
-            composable(Screen.Profile.route) { /* TODO: Buat Composable untuk layar Profile di sini */ }
+            composable(Screen.Tips.route) { TipsScreen() }
+            // Composable untuk Profile tidak diperlukan lagi di sini untuk sementara
         }
     }
 }

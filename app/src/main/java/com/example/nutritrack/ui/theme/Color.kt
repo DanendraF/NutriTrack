@@ -16,3 +16,5 @@ val TextBlack = Color(0xFF212121)
 val TextGray = Color(0xFF757575)
 val CardBackground = Color(0xFFFFFFFF)
 val BackgroundGray = Color(0xFFF7F9FC)
+
+val OrangeIndicator = Color(0xFFFFA500)

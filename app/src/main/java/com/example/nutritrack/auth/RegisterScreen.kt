@@ -21,16 +21,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.nutritrack.ui.theme.DarkGreen
 import com.example.nutritrack.ui.theme.LightGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
 
 @Composable
-fun RegisterScreen(navController: NavController) {
-    var name by remember { mutableStateOf("") }
+fun RegisterScreen(
+    // --- PERUBAHAN UTAMA: Gunakan callback ---
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
+    var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -52,34 +54,33 @@ fun RegisterScreen(navController: NavController) {
                 color = DarkGreen
             )
             Text(
-                text = "Mulai perjalanan sehatmu bersama kami",
+                text = "Daftar untuk memulai gaya hidup sehatmu",
                 fontSize = 16.sp,
                 color = TextGray,
                 modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
             )
 
-            // --- Name Field ---
-            TextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Nama Lengkap") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Name Icon") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = LightGreen.copy(alpha = 0.1f),
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = DarkGreen,
-                    unfocusedIndicatorColor = TextGray.copy(alpha = 0.5f),
-                    cursorColor = DarkGreen,
-                    focusedLeadingIconColor = DarkGreen,
-                    unfocusedLeadingIconColor = TextGray,
-                )
+            // --- Username, Email, Password Fields ---
+            val textFieldColors = TextFieldDefaults.colors(
+                focusedContainerColor = LightGreen.copy(alpha = 0.1f),
+                unfocusedContainerColor = Color.Transparent,
+                focusedIndicatorColor = DarkGreen,
+                unfocusedIndicatorColor = TextGray.copy(alpha = 0.5f),
+                cursorColor = DarkGreen,
+                focusedLeadingIconColor = DarkGreen,
+                unfocusedLeadingIconColor = TextGray,
             )
 
+            TextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username Icon") },
+                colors = textFieldColors
+            )
             Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Email Field ---
             TextField(
                 value = email,
                 onValueChange = { email = it },
@@ -88,20 +89,9 @@ fun RegisterScreen(navController: NavController) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email Icon") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = LightGreen.copy(alpha = 0.1f),
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = DarkGreen,
-                    unfocusedIndicatorColor = TextGray.copy(alpha = 0.5f),
-                    cursorColor = DarkGreen,
-                    focusedLeadingIconColor = DarkGreen,
-                    unfocusedLeadingIconColor = TextGray,
-                )
+                colors = textFieldColors
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Password Field ---
             TextField(
                 value = password,
                 onValueChange = { password = it },
@@ -111,24 +101,15 @@ fun RegisterScreen(navController: NavController) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password Icon") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = LightGreen.copy(alpha = 0.1f),
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = DarkGreen,
-                    unfocusedIndicatorColor = TextGray.copy(alpha = 0.5f),
-                    cursorColor = DarkGreen,
-                    focusedLeadingIconColor = DarkGreen,
-                    unfocusedLeadingIconColor = TextGray,
-                )
+                colors = textFieldColors
             )
 
             Spacer(modifier = Modifier.height(48.dp))
 
             // --- Register Button ---
             Button(
-                onClick = {
-                    // TODO: Logika registrasi
-                },
+                // Panggil callback onRegisterSuccess
+                onClick = onRegisterSuccess,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -145,7 +126,8 @@ fun RegisterScreen(navController: NavController) {
             ) {
                 Text("Sudah punya akun?", color = TextGray)
                 TextButton(
-                    onClick = { navController.navigate("login") },
+                    // Panggil callback onNavigateToLogin
+                    onClick = onNavigateToLogin,
                     colors = ButtonDefaults.textButtonColors(contentColor = DarkGreen)
                 ) {
                     Text("Masuk di sini", fontWeight = FontWeight.Bold)
@@ -159,6 +141,6 @@ fun RegisterScreen(navController: NavController) {
 @Composable
 fun RegisterScreenPreview() {
     NutriTrackTheme {
-        RegisterScreen(navController = rememberNavController())
+        RegisterScreen(onRegisterSuccess = {}, onNavigateToLogin = {})
     }
 }

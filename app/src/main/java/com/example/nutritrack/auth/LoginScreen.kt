@@ -1,7 +1,6 @@
 package com.example.nutritrack.auth
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.*import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,15 +19,17 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.nutritrack.ui.theme.DarkGreen
 import com.example.nutritrack.ui.theme.LightGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(
+    // --- PERUBAHAN UTAMA DI SINI ---
+    onLoginSuccess: () -> Unit,
+    onNavigateToRegister: () -> Unit
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -38,7 +39,7 @@ fun LoginScreen(navController: NavController) {
                 .padding(innerPadding)
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()), // Membuat layar bisa di-scroll
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -47,7 +48,7 @@ fun LoginScreen(navController: NavController) {
                 text = "Selamat Datang!",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkGreen // Menggunakan warna tema
+                color = DarkGreen
             )
             Text(
                 text = "Masuk untuk melanjutkan petualangan gizimu",
@@ -103,9 +104,8 @@ fun LoginScreen(navController: NavController) {
 
             // --- Login Button ---
             Button(
-                onClick = {
-                    // TODO: Logika autentikasi
-                },
+                // Panggil callback 'onLoginSuccess' saat tombol diklik
+                onClick = onLoginSuccess,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
@@ -122,7 +122,8 @@ fun LoginScreen(navController: NavController) {
             ) {
                 Text("Belum punya akun?", color = TextGray)
                 TextButton(
-                    onClick = { navController.navigate("register") },
+                    // Panggil callback 'onNavigateToRegister' saat tombol diklik
+                    onClick = onNavigateToRegister,
                     colors = ButtonDefaults.textButtonColors(contentColor = DarkGreen)
                 ) {
                     Text("Daftar di sini", fontWeight = FontWeight.Bold)
@@ -136,6 +137,7 @@ fun LoginScreen(navController: NavController) {
 @Composable
 fun LoginScreenPreview() {
     NutriTrackTheme {
-        LoginScreen(navController = rememberNavController())
+        // Preview tidak perlu mengimplementasikan logika navigasi
+        LoginScreen(onLoginSuccess = {}, onNavigateToRegister = {})
     }
 }
