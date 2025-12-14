@@ -1,22 +1,13 @@
 package com.example.nutritrack.onboarding
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.remember
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,31 +17,51 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
+import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
 import com.example.nutritrack.ui.theme.DarkGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
-import kotlin.math.pow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalculationResultScreen(
-    viewModel: OnboardingViewModel,
     onComplete: () -> Unit,
     onNavigateBack: () -> Unit,
     step: Int,
-    totalSteps: Int
+    totalSteps: Int,
+    onboardingViewModel: OnboardingViewModel = hiltViewModel(),
+    authViewModel: FirebaseAuthViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val onboardingState by onboardingViewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    val calories = remember(uiState) {
-        // Kalkulasi kalori sederhana (gantilah dengan logika TDEE Anda)
-        val height = uiState.height.toFloatOrNull() ?: 0f
-        val weight = uiState.weight.toFloatOrNull() ?: 0f
-        if (height > 0 && weight > 0) 2000 else 0
+    // Calculate nutrition targets when screen loads
+    LaunchedEffect(Unit) {
+        onboardingViewModel.calculateNutritionTargets()
+    }
+
+    // Handle save result
+    LaunchedEffect(onboardingState.saveSuccess) {
+        if (onboardingState.saveSuccess) {
+            onComplete()
+        }
+    }
+
+    // Handle errors
+    LaunchedEffect(onboardingState.saveError) {
+        onboardingState.saveError?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                duration = SnackbarDuration.Short
+            )
+            onboardingViewModel.clearError()
+        }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.White,
         topBar = {
             Column(modifier = Modifier.padding(top = 16.dp, start = 16.dp, end = 16.dp)) {
@@ -62,17 +73,33 @@ fun CalculationResultScreen(
             }
         },
         bottomBar = {
-            // Tombol di sini hanya untuk menyelesaikan
             Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 24.dp)) {
                 Button(
-                    onClick = onComplete,
+                    onClick = {
+                        // Get current user ID from Firebase
+                        val userId = authViewModel.getCurrentUserId()
+                        if (userId != null) {
+                            onboardingViewModel.saveUserData(userId)
+                        } else {
+                            // If no user logged in, show error
+                            // This shouldn't happen in normal flow
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
+                    enabled = !onboardingState.isSaving
                 ) {
-                    Text("Complete & Start Journey", color = Color.White)
+                    if (onboardingState.isSaving) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Text("Complete & Start Journey", color = Color.White)
+                    }
                 }
             }
         }
@@ -111,11 +138,34 @@ fun CalculationResultScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "$calories kcal / hari",
+                text = "${onboardingState.calculatedCalories} kcal / hari",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkGreen
             )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Show macro breakdown
+            if (onboardingState.calculatedMacros != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Target Nutrisi Harian:",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextGray
+                    )
+                    MacroRow("Protein", "${onboardingState.calculatedMacros?.protein?.toInt() ?: 0}g")
+                    MacroRow("Karbohidrat", "${onboardingState.calculatedMacros?.carbs?.toInt() ?: 0}g")
+                    MacroRow("Lemak", "${onboardingState.calculatedMacros?.fat?.toInt() ?: 0}g")
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "Anda dapat menyesuaikan target ini nanti di profil Anda.",
@@ -127,10 +177,26 @@ fun CalculationResultScreen(
     }
 }
 
+@Composable
+private fun MacroRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 14.sp, color = TextGray)
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
 @Preview(showBackground = true, widthDp = 360, heightDp = 780)
 @Composable
 private fun CalculationResultScreenPreview() {
     NutriTrackTheme {
-        CalculationResultScreen(viewModel(), {}, {}, 5, 5)
+        CalculationResultScreen(
+            onComplete = {},
+            onNavigateBack = {},
+            step = 5,
+            totalSteps = 5
+        )
     }
 }

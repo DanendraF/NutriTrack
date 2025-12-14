@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fastfood
@@ -52,13 +53,13 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Food : Screen("food", "Food", Icons.Default.Fastfood)
     data object Scan : Screen("scan", "Scan", Icons.Default.QrCodeScanner)
     data object Tips : Screen("tips", "Tips", Icons.Default.Lightbulb)
-    // Hapus Profile untuk sementara
-    // data object Profile : Screen("profile", "Profile", Icons.Default.Person)
+
+    data object Profile : Screen("profile", "Profile", Icons.Default.Person)
 }
 
-// Hapus Profile dari daftar untuk sementara
 val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips)
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,7 +68,6 @@ class MainActivity : ComponentActivity() {
             NutriTrackTheme {
                 val appNavController = rememberNavController()
 
-                // --- UBAH RUTE AWAL KE AUTH ---
                 NavHost(navController = appNavController, startDestination = GlobalRoutes.AUTH) {
                     // 1. Alur Autentikasi (Login/Register)
                     navigation(startDestination = "login", route = GlobalRoutes.AUTH) {

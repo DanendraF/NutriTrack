@@ -3,10 +3,11 @@ package com.example.nutritrack.onboarding
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
 
 object OnboardingRoutes {
     const val WELCOME = "welcome"
@@ -20,19 +21,33 @@ object OnboardingRoutes {
 @Composable
 fun OnboardingNavHost(onOnboardingComplete: () -> Unit) {
     val navController = rememberNavController()
-    val onboardingViewModel: OnboardingViewModel = viewModel()
+    val onboardingViewModel: OnboardingViewModel = hiltViewModel()
     val slideSpec = tween<androidx.compose.ui.unit.IntOffset>(350)
-    val totalSteps = 5 // Total langkah dalam progress bar
+    val totalSteps = 5
 
     NavHost(navController = navController, startDestination = OnboardingRoutes.WELCOME) {
         composable(OnboardingRoutes.WELCOME) {
-            WelcomeScreen(onNavigateNext = { navController.navigate(OnboardingRoutes.GENDER_AGE) })
+            WelcomeScreen(
+                onNavigateNext = {
+                    navController.navigate(OnboardingRoutes.GENDER_AGE)
+                }
+            )
         }
 
         composable(
             route = OnboardingRoutes.GENDER_AGE,
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) },
-            exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) }
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            }
         ) {
             GenderAgeScreen(
                 viewModel = onboardingViewModel,
@@ -45,8 +60,18 @@ fun OnboardingNavHost(onOnboardingComplete: () -> Unit) {
 
         composable(
             route = OnboardingRoutes.MEASUREMENTS,
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) },
-            exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) }
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            }
         ) {
             MeasurementScreen(
                 viewModel = onboardingViewModel,
@@ -59,8 +84,18 @@ fun OnboardingNavHost(onOnboardingComplete: () -> Unit) {
 
         composable(
             route = OnboardingRoutes.ACTIVITY_LEVEL,
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) },
-            exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) }
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            }
         ) {
             ActivityLevelScreen(
                 viewModel = onboardingViewModel,
@@ -73,8 +108,18 @@ fun OnboardingNavHost(onOnboardingComplete: () -> Unit) {
 
         composable(
             route = OnboardingRoutes.NUTRITION_GOAL,
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) },
-            exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) }
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            }
         ) {
             NutritionGoalScreen(
                 viewModel = onboardingViewModel,
@@ -87,18 +132,25 @@ fun OnboardingNavHost(onOnboardingComplete: () -> Unit) {
 
         composable(
             route = OnboardingRoutes.RESULT,
-            enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) },
-            exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec) }
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Left,
+                    slideSpec
+                )
+            }
         ) {
             CalculationResultScreen(
-                viewModel = onboardingViewModel,
-                onComplete = {
-                    onboardingViewModel.saveUserData()
-                    onOnboardingComplete()
-                },
+                onComplete = onOnboardingComplete,
                 onNavigateBack = { navController.popBackStack() },
                 step = 5,
-                totalSteps = totalSteps
+                totalSteps = totalSteps,
+                onboardingViewModel = onboardingViewModel
             )
         }
     }

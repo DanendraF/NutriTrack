@@ -33,6 +33,8 @@ import com.example.nutritrack.ui.theme.DarkGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
 import kotlin.math.roundToInt
+import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

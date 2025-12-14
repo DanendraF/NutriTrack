@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,10 +25,18 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.nutritrack.presentation.home.HomeViewModel
 import com.example.nutritrack.ui.theme.*
+import com.example.nutritrack.utils.DateUtils
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -35,16 +44,50 @@ fun HomeScreen() {
         contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        item { HomeTopBar() }
-        item { CaloriesCard() }
-        item { TodayMealsSection() }
+        item {
+            HomeTopBar(
+                userName = uiState.userName,
+                targetCalories = uiState.targetCalories,
+                progressPercentage = uiState.progressPercentage,
+                onSyncClick = { viewModel.refreshData() },
+                onSettingsClick = { /* TODO: Navigate to settings */ }
+            )
+        }
+        item {
+            CaloriesCard(
+                consumed = uiState.consumedCalories,
+                target = uiState.targetCalories,
+                remaining = uiState.remainingCalories,
+                progress = uiState.progressPercentage / 100f
+            )
+        }
+        item {
+            TodayMealsSection(
+                todayDate = uiState.todayDate
+            )
+        }
         item { ProgressTrackerCard() }
-        item { InsightAndTipsCard() }
+        item {
+            InsightAndTipsCard(
+                targetProtein = uiState.targetProtein,
+                consumedProtein = uiState.consumedProtein,
+                targetCarbs = uiState.targetCarbs,
+                consumedCarbs = uiState.consumedCarbs,
+                targetFat = uiState.targetFat,
+                consumedFat = uiState.consumedFat
+            )
+        }
     }
 }
 
 @Composable
-private fun HomeTopBar() {
+private fun HomeTopBar(
+    userName: String,
+    targetCalories: Int,
+    progressPercentage: Float,
+    onSyncClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -53,24 +96,46 @@ private fun HomeTopBar() {
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(Color.LightGray)
-        )
+                .background(DarkGreen.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = userName.firstOrNull()?.uppercase() ?: "U",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkGreen
+            )
+        }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("Hai Farrell!", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-            Text("Daily Goals : 1.900 kcal - 60% Done", fontSize = 12.sp, color = TextGray)
+            Text(
+                "Hai $userName!",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextBlack
+            )
+            Text(
+                "Daily Goals : $targetCalories kcal - ${progressPercentage.toInt()}% Done",
+                fontSize = 12.sp,
+                color = TextGray
+            )
         }
-        IconButton(onClick = { /*TODO*/ }) {
+        IconButton(onClick = onSyncClick) {
             Icon(Icons.Default.Cloud, contentDescription = "Sync", tint = TextGray)
         }
-        IconButton(onClick = { /*TODO*/ }) {
+        IconButton(onClick = onSettingsClick) {
             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextGray)
         }
     }
 }
 
 @Composable
-private fun CaloriesCard() {
+private fun CaloriesCard(
+    consumed: Float,
+    target: Int,
+    remaining: Int,
+    progress: Float
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -92,30 +157,34 @@ private fun CaloriesCard() {
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
-                        ) { append("1,280") }
+                        ) {
+                            append("${consumed.toInt()}")
+                        }
                         withStyle(style = SpanStyle(fontSize = 18.sp, color = Color.Gray)) {
-                            append(
-                                " / 2,100 kcal"
-                            )
+                            append(" / $target kcal")
                         }
                     },
                     modifier = Modifier.weight(1f)
                 )
                 Box(contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
-                        progress = { 0.7f },
+                        progress = { progress.coerceIn(0f, 1f) },
                         modifier = Modifier.size(60.dp),
                         color = DarkGreen,
                         strokeWidth = 6.dp,
                         trackColor = LightGreen,
                         strokeCap = StrokeCap.Round
                     )
-                    Text("70%", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        "${(progress * 100).toInt()}%",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
             LinearProgressIndicator(
-                progress = { 0.7f },
+                progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
@@ -125,13 +194,17 @@ private fun CaloriesCard() {
                 strokeCap = StrokeCap.Round
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Remaining 820 kcal", fontSize = 12.sp, color = Color.Gray)
+            Text(
+                "Remaining $remaining kcal",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
         }
     }
 }
 
 @Composable
-private fun TodayMealsSection() {
+private fun TodayMealsSection(todayDate: String) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -139,11 +212,16 @@ private fun TodayMealsSection() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Today's meals", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-            Text("Monday, 27 Okt", fontSize = 14.sp, color = Color.Gray)
+            Text(
+                DateUtils.formatDateForDisplay(todayDate),
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
         }
-        MealItem(tagText = "Add text", tagColor = Color(0xFFF44336))
-        MealItem(tagText = "Add text", tagColor = Color(0xFF2196F3))
-        MealItem(tagText = "Add text", tagColor = Color(0xFFFFC107))
+        // TODO: Display real meals from database
+        MealItem(tagText = "Breakfast", tagColor = Color(0xFFF44336))
+        MealItem(tagText = "Lunch", tagColor = Color(0xFF2196F3))
+        MealItem(tagText = "Dinner", tagColor = Color(0xFFFFC107))
     }
 }
 
@@ -156,16 +234,21 @@ private fun MealItem(tagText: String, tagColor: Color) {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(LightGreen))
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(LightGreen)
+            )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Headline", fontWeight = FontWeight.Bold)
+                Text("No meals logged", fontWeight = FontWeight.Bold)
                 Text(
-                    "Please add your content here. Keep it short and simple. And smile :)",
+                    "Tap to add $tagText",
                     fontSize = 12.sp,
                     color = Color.Gray,
                     lineHeight = 16.sp
@@ -207,46 +290,92 @@ private fun ProgressTrackerCard() {
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Placeholder untuk Grafik", color = Color.Gray)
+                Text("Charts will be added later", color = Color.Gray)
             }
         }
     }
 }
 
 @Composable
-private fun InsightAndTipsCard() {
+private fun InsightAndTipsCard(
+    targetProtein: Float,
+    consumedProtein: Float,
+    targetCarbs: Float,
+    consumedCarbs: Float,
+    targetFat: Float,
+    consumedFat: Float
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Insight & Tips", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = LightGreen)
+
+        // Protein insight
+        val proteinPercent = if (targetProtein > 0) (consumedProtein / targetProtein) * 100 else 0f
+        if (proteinPercent < 50) {
+            InsightCard(
+                message = "Protein intake rendah hari ini",
+                tip = "Tambahkan telur, ayam, atau ikan di makan berikutnya",
+                icon = Icons.Default.Lightbulb
+            )
+        }
+
+        // Carbs insight
+        val carbsPercent = if (targetCarbs > 0) (consumedCarbs / targetCarbs) * 100 else 0f
+        if (carbsPercent < 50) {
+            InsightCard(
+                message = "Karbohidrat masih kurang",
+                tip = "Nasi, roti, atau pasta bisa jadi pilihan",
+                icon = Icons.Default.Lightbulb
+            )
+        }
+
+        // Default insight if all good
+        if (proteinPercent >= 50 && carbsPercent >= 50) {
+            InsightCard(
+                message = "Nutrisi hari ini sudah baik!",
+                tip = "Terus pertahankan pola makan sehat",
+                icon = Icons.Default.Lightbulb
+            )
+        }
+    }
+}
+
+@Composable
+private fun InsightCard(
+    message: String,
+    tip: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = LightGreen)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Lightbulb, contentDescription = "Tips", tint = DarkGreen)
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Kamu kekurangan serat hari ini",
-                            fontWeight = FontWeight.Bold,
-                            color = DarkGreen
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Box(modifier = Modifier
+            Icon(icon, contentDescription = "Tips", tint = DarkGreen)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        message,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkGreen
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(Color.Red))
-                    }
-                    Text(
-                        "Tambahkan sayur hijau atau buah di makan malam",
-                        fontSize = 12.sp,
-                        color = DarkGreen.copy(alpha = 0.8f)
+                            .background(OrangeIndicator)
                     )
                 }
+                Text(
+                    tip,
+                    fontSize = 12.sp,
+                    color = DarkGreen.copy(alpha = 0.8f)
+                )
             }
         }
     }
@@ -254,7 +383,7 @@ private fun InsightAndTipsCard() {
 
 @Preview(showBackground = true)
 @Composable
-private fun HomeScreenPreview() {
+fun HomeScreenPreview() {
     NutriTrackTheme {
         HomeScreen()
     }

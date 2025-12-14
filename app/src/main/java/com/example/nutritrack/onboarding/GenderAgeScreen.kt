@@ -3,11 +3,16 @@ package com.example.nutritrack.onboarding
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.Male
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,12 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
+import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
 import com.example.nutritrack.ui.theme.DarkGreen
+import com.example.nutritrack.ui.theme.LightGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
 
@@ -31,9 +40,16 @@ fun GenderAgeScreen(
     onNavigateNext: () -> Unit,
     onNavigateBack: () -> Unit,
     step: Int,
-    totalSteps: Int
+    totalSteps: Int,
+    authViewModel: FirebaseAuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Get user info from Firebase Auth
+    LaunchedEffect(Unit) {
+        val currentUser = authViewModel.getCurrentUserId()
+        // Pre-fill email if available from auth
+    }
 
     Scaffold(
         containerColor = Color.White,
@@ -52,14 +68,73 @@ fun GenderAgeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Tell Us About You", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(
+                "Tell Us About You",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Text("This helps us create your personalized plan", fontSize = 14.sp, color = TextGray, textAlign = TextAlign.Center)
-            Spacer(modifier = Modifier.height(48.dp))
+            Text(
+                "This helps us create your personalized plan",
+                fontSize = 14.sp,
+                color = TextGray,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Name TextField
+            OutlinedTextField(
+                value = uiState.name,
+                onValueChange = { viewModel.updateName(it) },
+                label = { Text("Your Name") },
+                leadingIcon = {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = DarkGreen)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = DarkGreen,
+                    focusedLabelColor = DarkGreen,
+                    cursorColor = DarkGreen
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Email TextField
+            OutlinedTextField(
+                value = uiState.email,
+                onValueChange = { viewModel.updateEmail(it) },
+                label = { Text("Email") },
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = null, tint = DarkGreen)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = DarkGreen,
+                    focusedLabelColor = DarkGreen,
+                    cursorColor = DarkGreen
+                )
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Gender Selection
+            Text(
+                "Select Your Gender",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -68,15 +143,15 @@ fun GenderAgeScreen(
                 GenderCard(
                     label = "Male",
                     icon = Icons.Default.Male,
-                    isSelected = uiState.gender == "male",
-                    onClick = { viewModel.updateGender("male") },
+                    isSelected = uiState.gender == "Male",
+                    onClick = { viewModel.updateGender("Male") },
                     modifier = Modifier.weight(1f)
                 )
                 GenderCard(
                     label = "Female",
                     icon = Icons.Default.Female,
-                    isSelected = uiState.gender == "female",
-                    onClick = { viewModel.updateGender("female") },
+                    isSelected = uiState.gender == "Female",
+                    onClick = { viewModel.updateGender("Female") },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -92,9 +167,10 @@ private fun GenderCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val backgroundColor = if (isSelected) Color(0xFFF3F4F6) else Color.White
+    val backgroundColor = if (isSelected) LightGreen.copy(alpha = 0.3f) else Color.White
     val contentColor = if (isSelected) DarkGreen else TextGray
-    val border = if (isSelected) BorderStroke(2.dp, DarkGreen) else BorderStroke(1.dp, Color.LightGray)
+    val border =
+        if (isSelected) BorderStroke(2.dp, DarkGreen) else BorderStroke(1.dp, Color.LightGray)
 
     Card(
         modifier = modifier
@@ -110,7 +186,12 @@ private fun GenderCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(imageVector = icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(40.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = contentColor,
+                modifier = Modifier.size(40.dp)
+            )
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = label, fontWeight = FontWeight.SemiBold, color = contentColor)
         }
@@ -121,6 +202,12 @@ private fun GenderCard(
 @Composable
 fun GenderAgeScreenPreview() {
     NutriTrackTheme {
-        GenderAgeScreen(viewModel(), {}, {}, 1, 5)
+        GenderAgeScreen(
+            viewModel = hiltViewModel(),
+            onNavigateNext = {},
+            onNavigateBack = {},
+            step = 1,
+            totalSteps = 5
+        )
     }
 }

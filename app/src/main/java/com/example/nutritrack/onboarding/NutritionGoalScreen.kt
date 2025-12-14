@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.nutritrack.ui.theme.DarkGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
+import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
 
 private val goalOptions = listOf(
     "Lose Weight" to "Menurunkan berat badan.",
