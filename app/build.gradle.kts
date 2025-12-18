@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.dagger.hilt.android") version "2.50" apply true
+    id("com.google.dagger.hilt.android") version "2.48" apply true
     id("com.google.devtools.ksp") version "2.0.21-1.0.27" apply true
 }
 
@@ -59,9 +59,12 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:$nav_version")
 
     // Hilt Dependency Injection
-    implementation("com.google.dagger:hilt-android:2.50")
-    ksp("com.google.dagger:hilt-compiler:2.50")
+    implementation("com.google.dagger:hilt-android:2.48")
+    ksp("com.google.dagger:hilt-compiler:2.48")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+
+    // Fix JavaPoet compatibility issue with Hilt
+    implementation("com.squareup:javapoet:1.13.0")
 
     // Room Database
     val room_version = "2.6.1"

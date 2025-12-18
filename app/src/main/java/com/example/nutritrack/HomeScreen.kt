@@ -2,17 +2,16 @@ package com.example.nutritrack
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,62 +20,119 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.nutritrack.domain.model.Meal
+import com.example.nutritrack.domain.model.MealType
+import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.presentation.home.HomeViewModel
+import com.example.nutritrack.presentation.meal.MealViewModel
 import com.example.nutritrack.ui.theme.*
 import com.example.nutritrack.utils.DateUtils
+import java.text.SimpleDateFormat
+import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel()
+    onNavigateToAddMeal: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel(),
+    authViewModel: FirebaseAuthViewModel = hiltViewModel(),
+    mealViewModel: MealViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val deleteMealState by mealViewModel.deleteMealState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundGray),
-        contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        item {
-            HomeTopBar(
-                userName = uiState.userName,
-                targetCalories = uiState.targetCalories,
-                progressPercentage = uiState.progressPercentage,
-                onSyncClick = { viewModel.refreshData() },
-                onSettingsClick = { /* TODO: Navigate to settings */ }
-            )
+    // Initialize userId
+    LaunchedEffect(Unit) {
+        authViewModel.getCurrentUserId()?.let { userId ->
+            viewModel.setUserId(userId)
         }
-        item {
-            CaloriesCard(
-                consumed = uiState.consumedCalories,
-                target = uiState.targetCalories,
-                remaining = uiState.remainingCalories,
-                progress = uiState.progressPercentage / 100f
-            )
+    }
+
+    // Handle delete result
+    LaunchedEffect(deleteMealState) {
+        when (deleteMealState) {
+            is com.example.nutritrack.domain.model.UiState.Success -> {
+                snackbarHostState.showSnackbar("Meal deleted successfully")
+                mealViewModel.resetDeleteState()
+            }
+            is com.example.nutritrack.domain.model.UiState.Error -> {
+                snackbarHostState.showSnackbar(
+                    (deleteMealState as com.example.nutritrack.domain.model.UiState.Error).message
+                )
+                mealViewModel.resetDeleteState()
+            }
+            else -> {}
         }
-        item {
-            TodayMealsSection(
-                todayDate = uiState.todayDate
-            )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNavigateToAddMeal,
+                containerColor = DarkGreen,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Meal")
+            }
         }
-        item { ProgressTrackerCard() }
-        item {
-            InsightAndTipsCard(
-                targetProtein = uiState.targetProtein,
-                consumedProtein = uiState.consumedProtein,
-                targetCarbs = uiState.targetCarbs,
-                consumedCarbs = uiState.consumedCarbs,
-                targetFat = uiState.targetFat,
-                consumedFat = uiState.consumedFat
-            )
-        }
+    ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackgroundGray)
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                item {
+                    HomeTopBar(
+                        userName = uiState.userName,
+                        targetCalories = uiState.targetCalories,
+                        progressPercentage = uiState.progressPercentage.toFloat(),
+                        onSyncClick = { viewModel.refreshData() },
+                        onSettingsClick = { /* TODO: Navigate to settings */ }
+                    )
+                }
+                item {
+                    CaloriesCard(
+                        consumed = uiState.consumedCalories.toFloat(),
+                        target = uiState.targetCalories,
+                        remaining = uiState.remainingCalories,
+                        progress = uiState.progressPercentage / 100f
+                    )
+                }
+                item {
+                    TodayMealsSection(
+                        meals = uiState.todayMeals,
+                        todayDate = uiState.todayDate,
+                        onDeleteMeal = { meal ->
+                            authViewModel.getCurrentUserId()?.let { userId ->
+                                mealViewModel.deleteMeal(userId, meal.id, meal.timestamp)
+                            }
+                        }
+                    )
+                }
+                item { ProgressTrackerCard() }
+                item {
+                    InsightAndTipsCard(
+                        targetProtein = uiState.targetProtein.toFloat(),
+                        consumedProtein = uiState.consumedProtein.toFloat(),
+                        targetCarbs = uiState.targetCarbs.toFloat(),
+                        consumedCarbs = uiState.consumedCarbs.toFloat(),
+                        targetFat = uiState.targetFat.toFloat(),
+                        consumedFat = uiState.consumedFat.toFloat()
+                    )
+                }
+            }
     }
 }
 
@@ -204,7 +260,11 @@ private fun CaloriesCard(
 }
 
 @Composable
-private fun TodayMealsSection(todayDate: String) {
+private fun TodayMealsSection(
+    meals: List<Meal>,
+    todayDate: String,
+    onDeleteMeal: (Meal) -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -218,55 +278,188 @@ private fun TodayMealsSection(todayDate: String) {
                 color = Color.Gray
             )
         }
-        // TODO: Display real meals from database
-        MealItem(tagText = "Breakfast", tagColor = Color(0xFFF44336))
-        MealItem(tagText = "Lunch", tagColor = Color(0xFF2196F3))
-        MealItem(tagText = "Dinner", tagColor = Color(0xFFFFC107))
+
+        if (meals.isEmpty()) {
+            // Empty state
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Restaurant,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "No meals logged yet",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        "Tap + button to add your first meal",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        } else {
+            // Display meals
+            meals.forEach { meal ->
+                MealItemCard(
+                    meal = meal,
+                    onDelete = { onDeleteMeal(meal) }
+                )
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MealItem(tagText: String, tagColor: Color) {
+private fun MealItemCard(
+    meal: Meal,
+    onDelete: () -> Unit
+) {
+    val mealTypeColor = when (meal.mealType) {
+        MealType.BREAKFAST -> Color(0xFFF44336)
+        MealType.LUNCH -> Color(0xFF2196F3)
+        MealType.DINNER -> Color(0xFFFFC107)
+        MealType.SNACK -> Color(0xFF4CAF50)
+    }
+
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val mealTime = timeFormat.format(meal.timestamp)
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Meal") },
+            text = { Text("Are you sure you want to delete this meal?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Food icon
             Box(
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .background(LightGreen)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("No meals logged", fontWeight = FontWeight.Bold)
-                Text(
-                    "Tap to add $tagText",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    lineHeight = 16.sp
+                    .background(mealTypeColor.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Restaurant,
+                    contentDescription = null,
+                    tint = mealTypeColor,
+                    modifier = Modifier.size(28.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(tagColor)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Meal info
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    tagText,
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = meal.foodName,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${meal.quantity} × ${meal.servingSize}",
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = " • ",
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = mealTime,
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${meal.calories} kcal • P:${meal.protein}g C:${meal.carbs}g F:${meal.fat}g",
+                    fontSize = 12.sp,
+                    color = DarkGreen,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Meal type badge & delete
+            Column(horizontalAlignment = Alignment.End) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(mealTypeColor)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        meal.mealType.displayName,
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                IconButton(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

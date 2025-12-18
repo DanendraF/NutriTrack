@@ -2,33 +2,39 @@ package com.example.nutritrack.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutritrack.data.repository.FirestoreMealRepository
 import com.example.nutritrack.data.repository.UserRepository
+import com.example.nutritrack.domain.model.Meal
 import com.example.nutritrack.domain.model.User
 import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.utils.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.Date
 import javax.inject.Inject
 
 data class HomeUiState(
     val userName: String = "",
     val targetCalories: Int = 2000,
-    val consumedCalories: Float = 0f,
+    val consumedCalories: Int = 0,
     val remainingCalories: Int = 2000,
-    val progressPercentage: Float = 0f,
+    val progressPercentage: Int = 0,
     val todayDate: String = DateUtils.getCurrentDate(),
-    val targetProtein: Float = 0f,
-    val targetCarbs: Float = 0f,
-    val targetFat: Float = 0f,
-    val consumedProtein: Float = 0f,
-    val consumedCarbs: Float = 0f,
-    val consumedFat: Float = 0f
+    val targetProtein: Int = 0,
+    val targetCarbs: Int = 0,
+    val targetFat: Int = 0,
+    val consumedProtein: Int = 0,
+    val consumedCarbs: Int = 0,
+    val consumedFat: Int = 0,
+    val todayMeals: List<Meal> = emptyList(),
+    val isLoading: Boolean = true
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val firestoreMealRepository: FirestoreMealRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -37,9 +43,14 @@ class HomeViewModel @Inject constructor(
     private val _userState = MutableStateFlow<UiState<User>>(UiState.Loading)
     val userState = _userState.asStateFlow()
 
-    init {
-        loadUserData()
-        loadTodayMeals()
+    private var currentUserId: String? = null
+
+    fun setUserId(userId: String) {
+        if (currentUserId != userId) {
+            currentUserId = userId
+            loadUserData()
+            loadTodayMeals(userId)
+        }
     }
 
     private fun loadUserData() {
@@ -47,6 +58,7 @@ class HomeViewModel @Inject constructor(
             userRepository.getCurrentUser()
                 .catch { e ->
                     _userState.value = UiState.Error(e.message ?: "Failed to load user data")
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 .collect { user ->
                     if (user != null) {
@@ -55,64 +67,59 @@ class HomeViewModel @Inject constructor(
                             it.copy(
                                 userName = user.name,
                                 targetCalories = user.targetCalories,
-                                remainingCalories = user.targetCalories,
-                                targetProtein = user.targetMacros.protein,
-                                targetCarbs = user.targetMacros.carbs,
-                                targetFat = user.targetMacros.fat
+                                targetProtein = user.targetMacros.protein.toInt(),
+                                targetCarbs = user.targetMacros.carbs.toInt(),
+                                targetFat = user.targetMacros.fat.toInt(),
+                                isLoading = false
                             )
                         }
                     } else {
                         _userState.value = UiState.Error("User not found")
+                        _uiState.update { it.copy(isLoading = false) }
                     }
                 }
         }
     }
 
-    private fun loadTodayMeals() {
-        // TODO: Load meals from MealRepository when implemented
-        // For now, using mock data
+    private fun loadTodayMeals(userId: String) {
         viewModelScope.launch {
-            // Simulate loading meals
-            val mockConsumedCalories = 1280f
-            val mockConsumedProtein = 45f
-            val mockConsumedCarbs = 150f
-            val mockConsumedFat = 40f
+            firestoreMealRepository.getTodaysMeals(userId)
+                .catch { e: Throwable ->
+                    // Handle error but don't crash
+                    e.printStackTrace()
+                }
+                .collect { meals: List<Meal> ->
+                    // Calculate totals from meals
+                    val totalCalories = meals.sumOf { meal -> meal.calories }
+                    val totalProtein = meals.sumOf { meal -> meal.protein }
+                    val totalCarbs = meals.sumOf { meal -> meal.carbs }
+                    val totalFat = meals.sumOf { meal -> meal.fat }
 
-            _uiState.update { state ->
-                val remaining = (state.targetCalories - mockConsumedCalories).coerceAtLeast(0f).toInt()
-                val progress = ((mockConsumedCalories / state.targetCalories) * 100).coerceAtMost(100f)
+                    _uiState.update { state ->
+                        val remaining = (state.targetCalories - totalCalories).coerceAtLeast(0)
+                        val progress = if (state.targetCalories > 0) {
+                            ((totalCalories.toFloat() / state.targetCalories) * 100).toInt().coerceAtMost(100)
+                        } else 0
 
-                state.copy(
-                    consumedCalories = mockConsumedCalories,
-                    remainingCalories = remaining,
-                    progressPercentage = progress,
-                    consumedProtein = mockConsumedProtein,
-                    consumedCarbs = mockConsumedCarbs,
-                    consumedFat = mockConsumedFat
-                )
-            }
+                        state.copy(
+                            todayMeals = meals,
+                            consumedCalories = totalCalories,
+                            consumedProtein = totalProtein,
+                            consumedCarbs = totalCarbs,
+                            consumedFat = totalFat,
+                            remainingCalories = remaining,
+                            progressPercentage = progress,
+                            isLoading = false
+                        )
+                    }
+                }
         }
     }
 
     fun refreshData() {
-        loadUserData()
-        loadTodayMeals()
-    }
-
-    fun addMealCalories(calories: Float, protein: Float, carbs: Float, fat: Float) {
-        _uiState.update { state ->
-            val newConsumed = state.consumedCalories + calories
-            val remaining = (state.targetCalories - newConsumed).coerceAtLeast(0f).toInt()
-            val progress = ((newConsumed / state.targetCalories) * 100).coerceAtMost(100f)
-
-            state.copy(
-                consumedCalories = newConsumed,
-                remainingCalories = remaining,
-                progressPercentage = progress,
-                consumedProtein = state.consumedProtein + protein,
-                consumedCarbs = state.consumedCarbs + carbs,
-                consumedFat = state.consumedFat + fat
-            )
+        currentUserId?.let { userId ->
+            loadUserData()
+            loadTodayMeals(userId)
         }
     }
 }

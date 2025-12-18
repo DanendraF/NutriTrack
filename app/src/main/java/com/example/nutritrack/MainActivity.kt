@@ -36,6 +36,9 @@ import com.example.nutritrack.FoodScreen
 import com.example.nutritrack.HomeScreen
 import com.example.nutritrack.ScanScreen
 import com.example.nutritrack.TipsScreen
+import com.example.nutritrack.presentation.profile.ProfileScreen
+import com.example.nutritrack.presentation.settings.SettingsScreen
+import com.example.nutritrack.presentation.meal.AddMealScreen
 
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 
@@ -57,7 +60,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Profile : Screen("profile", "Profile", Icons.Default.Person)
 }
 
-val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips)
+val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips, Screen.Profile)
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -143,11 +146,47 @@ fun MainAppLayout() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { HomeScreen() }
+            composable(Screen.Home.route) {
+                HomeScreen(
+                    onNavigateToAddMeal = {
+                        navController.navigate("add_meal")
+                    }
+                )
+            }
             composable(Screen.Food.route) { FoodScreen() }
             composable(Screen.Scan.route) { ScanScreen() }
             composable(Screen.Tips.route) { TipsScreen() }
-            // Composable untuk Profile tidak diperlukan lagi di sini untuk sementara
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    onNavigateToLogin = {
+                        // Navigate back to login and clear backstack
+                        navController.navigate(GlobalRoutes.AUTH) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate("settings")
+                    }
+                )
+            }
+
+            // Add Meal Screen
+            composable("add_meal") {
+                AddMealScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Settings Screen
+            composable("settings") {
+                SettingsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
     }
 }

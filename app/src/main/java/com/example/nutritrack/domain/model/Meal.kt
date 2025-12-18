@@ -1,15 +1,19 @@
 package com.example.nutritrack.domain.model
 
+import java.util.Date
+
 data class Meal(
-    val mealId: String,
-    val userId: String,
-    val food: Food,
-    val mealType: MealType,
-    val quantity: Float,
-    val portionUnit: String,
-    val totalNutrition: NutritionInfo,
-    val date: String,
-    val timestamp: Long,
+    val id: String = "",
+    val foodId: String = "",
+    val foodName: String = "",
+    val mealType: MealType = MealType.BREAKFAST,
+    val servingSize: String = "100g",
+    val quantity: Float = 1f,
+    val calories: Int = 0,
+    val protein: Int = 0,
+    val carbs: Int = 0,
+    val fat: Int = 0,
+    val timestamp: Date = Date(),
     val imageUrl: String? = null
 )
 
