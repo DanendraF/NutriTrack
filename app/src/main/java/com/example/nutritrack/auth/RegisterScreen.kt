@@ -19,7 +19,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.ui.theme.DarkGreen
@@ -31,7 +31,7 @@ import com.example.nutritrack.ui.theme.TextGray
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    viewModel: FirebaseAuthViewModel = hiltViewModel()
+    viewModel: FirebaseAuthViewModel = koinViewModel()
 ) {
     val authState by viewModel.authState.collectAsState()
     val registerState by viewModel.registerState.collectAsState()

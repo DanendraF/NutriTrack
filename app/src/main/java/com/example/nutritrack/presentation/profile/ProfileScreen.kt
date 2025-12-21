@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.ui.theme.*
 
@@ -25,7 +25,7 @@ import com.example.nutritrack.ui.theme.*
 fun ProfileScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val logoutState by viewModel.logoutState.collectAsState()

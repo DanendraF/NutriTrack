@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.nutritrack.domain.model.MealType
 import com.example.nutritrack.domain.model.UiState
@@ -27,8 +27,8 @@ import com.example.nutritrack.ui.theme.DarkGreen
 @Composable
 fun AddMealScreen(
     onNavigateBack: () -> Unit,
-    viewModel: MealViewModel = hiltViewModel(),
-    authViewModel: FirebaseAuthViewModel = hiltViewModel()
+    viewModel: MealViewModel = koinViewModel(),
+    authViewModel: FirebaseAuthViewModel = koinViewModel()
 ) {
     val uiState by viewModel.addMealState.collectAsStateWithLifecycle()
     val saveMealState by viewModel.saveMealState.collectAsStateWithLifecycle()

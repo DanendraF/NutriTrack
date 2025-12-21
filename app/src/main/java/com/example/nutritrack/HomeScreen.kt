@@ -25,7 +25,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.nutritrack.domain.model.Meal
 import com.example.nutritrack.domain.model.MealType
@@ -41,9 +41,9 @@ import java.util.*
 @Composable
 fun HomeScreen(
     onNavigateToAddMeal: () -> Unit = {},
-    viewModel: HomeViewModel = hiltViewModel(),
-    authViewModel: FirebaseAuthViewModel = hiltViewModel(),
-    mealViewModel: MealViewModel = hiltViewModel()
+    viewModel: HomeViewModel = koinViewModel(),
+    authViewModel: FirebaseAuthViewModel = koinViewModel(),
+    mealViewModel: MealViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deleteMealState by mealViewModel.deleteMealState.collectAsStateWithLifecycle()

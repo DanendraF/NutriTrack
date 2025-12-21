@@ -2,16 +2,19 @@ package com.example.nutritrack.presentation.onboarding.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutritrack.data.remote.Result
+import com.example.nutritrack.data.repository.ApiUserRepository
 import com.example.nutritrack.data.repository.UserRepository
 import com.example.nutritrack.domain.model.*
 import com.example.nutritrack.utils.DateUtils
 import com.example.nutritrack.utils.NutritionCalculator
-import dagger.hilt.android.lifecycle.HiltViewModel
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import java.time.LocalDate
+import java.time.Period
 
 data class OnboardingState(
     val name: String = "",
@@ -29,9 +32,10 @@ data class OnboardingState(
     val saveSuccess: Boolean = false
 )
 
-@HiltViewModel
-class OnboardingViewModel @Inject constructor(
-    private val userRepository: UserRepository
+class OnboardingViewModel(
+    private val userRepository: UserRepository,
+    private val apiUserRepository: ApiUserRepository,
+    private val firebaseAuth: FirebaseAuth
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingState())
@@ -105,55 +109,104 @@ class OnboardingViewModel @Inject constructor(
     fun saveUserData(userId: String) {
         val state = _uiState.value
 
+        android.util.Log.d("OnboardingViewModel", "=== saveUserData called ===")
+        android.util.Log.d("OnboardingViewModel", "userId: $userId")
+        android.util.Log.d("OnboardingViewModel", "state: name=${state.name}, email=${state.email}, age=${state.age}, height=${state.height}, weight=${state.weight}")
+
         if (!validateInput(state)) {
+            android.util.Log.e("OnboardingViewModel", "Validation failed!")
             _uiState.update { it.copy(saveError = "Please fill all required fields") }
             return
         }
+
+        android.util.Log.d("OnboardingViewModel", "Validation passed, starting API call...")
 
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isSaving = true, saveError = null) }
 
-                val weight = state.weight.toFloat()
-                val height = state.height.toFloat()
+                val weight = state.weight.toDouble()
+                val height = state.height.toDouble()
                 val age = state.age.toInt()
-                val activityLevel = ActivityLevel.fromString(state.activityLevel)
-                val nutritionGoal = NutritionGoal.fromString(state.goal)
 
-                val targets = NutritionCalculator.calculateNutritionTargets(
-                    weight = weight,
-                    height = height,
-                    age = age,
-                    gender = state.gender,
-                    activityLevel = activityLevel,
-                    goal = nutritionGoal
-                )
+                // Calculate date of birth from age
+                val dateOfBirth = LocalDate.now().minusYears(age.toLong()).toString()
 
-                val user = User(
-                    userId = userId,
-                    name = state.name,
+                // Map gender to lowercase for API
+                val genderForApi = state.gender.lowercase()
+
+                android.util.Log.d("OnboardingViewModel", "Calling createUser API...")
+                android.util.Log.d("OnboardingViewModel", "Request: email=${state.email}, name=${state.name}, dob=$dateOfBirth, gender=$genderForApi, h=$height, w=$weight")
+
+                // Create user via API
+                apiUserRepository.createUser(
                     email = state.email,
-                    gender = state.gender,
-                    age = age,
+                    name = state.name,
+                    dateOfBirth = dateOfBirth,
+                    gender = genderForApi,
                     height = height,
-                    weight = weight,
-                    activityLevel = activityLevel,
-                    nutritionGoal = nutritionGoal,
-                    targetCalories = targets.targetCalories,
-                    targetMacros = targets.macros
-                )
+                    weight = weight
+                ).collect { result ->
+                    android.util.Log.d("OnboardingViewModel", "API Result received: ${result.javaClass.simpleName}")
+                    when (result) {
+                        is Result.Loading -> {
+                            android.util.Log.d("OnboardingViewModel", "Loading state...")
+                            // Already set isSaving = true
+                        }
+                        is Result.Success -> {
+                            android.util.Log.d("OnboardingViewModel", "SUCCESS! User created: ${result.data}")
+                            val userResponse = result.data
 
-                userRepository.saveUser(user)
+                            // Save to local Room database for offline access
+                            val activityLevel = ActivityLevel.fromString(state.activityLevel)
+                            val nutritionGoal = NutritionGoal.fromString(state.goal)
 
-                _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        saveSuccess = true,
-                        calculatedCalories = targets.targetCalories,
-                        calculatedMacros = targets.macros
-                    )
+                            val user = User(
+                                userId = userId,
+                                name = state.name,
+                                email = state.email,
+                                gender = state.gender,
+                                age = age,
+                                height = height.toFloat(),
+                                weight = weight.toFloat(),
+                                activityLevel = activityLevel,
+                                nutritionGoal = nutritionGoal,
+                                targetCalories = userResponse.goals.targetCalories,
+                                targetMacros = Macros(
+                                    protein = userResponse.goals.targetProtein.toFloat(),
+                                    carbs = userResponse.goals.targetCarbs.toFloat(),
+                                    fat = userResponse.goals.targetFat.toFloat()
+                                )
+                            )
+
+                            userRepository.saveUser(user)
+
+                            _uiState.update {
+                                it.copy(
+                                    isSaving = false,
+                                    saveSuccess = true,
+                                    calculatedCalories = userResponse.goals.targetCalories,
+                                    calculatedMacros = Macros(
+                                        protein = userResponse.goals.targetProtein.toFloat(),
+                                        carbs = userResponse.goals.targetCarbs.toFloat(),
+                                        fat = userResponse.goals.targetFat.toFloat()
+                                    )
+                                )
+                            }
+                        }
+                        is Result.Error -> {
+                            android.util.Log.e("OnboardingViewModel", "ERROR from API: ${result.message}")
+                            _uiState.update {
+                                it.copy(
+                                    isSaving = false,
+                                    saveError = "Failed to create user: ${result.message}"
+                                )
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("OnboardingViewModel", "EXCEPTION in saveUserData", e)
                 _uiState.update {
                     it.copy(
                         isSaving = false,

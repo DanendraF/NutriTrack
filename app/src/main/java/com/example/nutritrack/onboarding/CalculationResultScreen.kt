@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
 import com.example.nutritrack.ui.theme.DarkGreen
@@ -31,8 +31,8 @@ fun CalculationResultScreen(
     onNavigateBack: () -> Unit,
     step: Int,
     totalSteps: Int,
-    onboardingViewModel: OnboardingViewModel = hiltViewModel(),
-    authViewModel: FirebaseAuthViewModel = hiltViewModel()
+    onboardingViewModel: OnboardingViewModel = koinViewModel(),
+    authViewModel: FirebaseAuthViewModel = koinViewModel()
 ) {
     val onboardingState by onboardingViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }

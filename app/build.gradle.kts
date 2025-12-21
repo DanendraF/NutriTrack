@@ -3,14 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 
-    // KAPT untuk Hilt (WAJIB)
-    kotlin("kapt")
-
-    // KSP hanya untuk Room
+    // KSP untuk Room
     id("com.google.devtools.ksp") version "2.0.21-1.0.27"
-
-    // Hilt
-    id("com.google.dagger.hilt.android") version "2.51.1"
 }
 
 apply(plugin = "com.google.gms.google-services")
@@ -48,6 +42,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -69,10 +64,10 @@ dependencies {
     // ===== NAVIGATION =====
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // ===== HILT (KAPT, BUKAN KSP) =====
-    implementation("com.google.dagger:hilt-android:2.51.1")
-    kapt("com.google.dagger:hilt-compiler:2.51.1")
-    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+    // ===== KOIN (Dependency Injection) =====
+    val koin_version = "3.5.3"
+    implementation("io.insert-koin:koin-android:$koin_version")
+    implementation("io.insert-koin:koin-androidx-compose:$koin_version")
 
     // ===== ROOM (KSP AMAN) =====
     implementation("androidx.room:room-runtime:2.6.1")
@@ -109,6 +104,12 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
+
+    // ===== RETROFIT & NETWORKING =====
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // ===== COROUTINES =====
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.8.1")

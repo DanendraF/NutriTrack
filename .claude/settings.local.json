@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(findstr:*)",
-      "Bash(./gradlew build:*)"
+      "Bash(./gradlew build:*)",
+      "Bash(go mod init:*)",
+      "Bash(go get:*)",
+      "Bash(go run:*)",
+      "Bash(timeout /t 3)",
+      "Bash(dir:*)",
+      "Bash(go build:*)",
+      "Bash(.binapi.exe)",
+      "Bash(./bin/api.exe:*)",
+      "Bash(Select-Object -First 100)",
+      "Bash(./gradlew:*)"
     ]
   }
 }

@@ -6,10 +6,8 @@ import com.example.nutritrack.data.repository.AuthRepository
 import com.example.nutritrack.data.repository.UserRepository
 import com.example.nutritrack.domain.model.User
 import com.example.nutritrack.domain.model.UiState
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class ProfileUiState(
     val user: User? = null,
@@ -17,8 +15,7 @@ data class ProfileUiState(
     val errorMessage: String? = null
 )
 
-@HiltViewModel
-class ProfileViewModel @Inject constructor(
+class ProfileViewModel(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository
 ) : ViewModel() {

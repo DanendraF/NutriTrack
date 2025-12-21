@@ -5,10 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.nutritrack.data.repository.FoodRepository
 import com.example.nutritrack.domain.model.Food
 import com.example.nutritrack.domain.model.UiState
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class FoodUiState(
     val searchQuery: String = "",
@@ -20,8 +18,7 @@ data class FoodUiState(
     val calculatedFat: Float = 0f
 )
 
-@HiltViewModel
-class FoodViewModel @Inject constructor(
+class FoodViewModel(
     private val foodRepository: FoodRepository
 ) : ViewModel() {
 

@@ -8,11 +8,9 @@ import com.example.nutritrack.domain.model.Meal
 import com.example.nutritrack.domain.model.User
 import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.utils.DateUtils
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Date
-import javax.inject.Inject
 
 data class HomeUiState(
     val userName: String = "",
@@ -31,8 +29,7 @@ data class HomeUiState(
     val isLoading: Boolean = true
 )
 
-@HiltViewModel
-class HomeViewModel @Inject constructor(
+class HomeViewModel(
     private val userRepository: UserRepository,
     private val firestoreMealRepository: FirestoreMealRepository
 ) : ViewModel() {

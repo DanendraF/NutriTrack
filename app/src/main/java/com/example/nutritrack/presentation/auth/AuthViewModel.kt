@@ -3,12 +3,10 @@ package com.example.nutritrack.presentation.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutritrack.domain.model.UiState
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class AuthState(
     val email: String = "",
@@ -19,10 +17,7 @@ data class AuthState(
     val usernameError: String? = null
 )
 
-@HiltViewModel
-class AuthViewModel @Inject constructor(
-    // Firebase Auth will be injected here later
-) : ViewModel() {
+class AuthViewModel : ViewModel() {
 
     private val _authState = MutableStateFlow(AuthState())
     val authState = _authState.asStateFlow()
