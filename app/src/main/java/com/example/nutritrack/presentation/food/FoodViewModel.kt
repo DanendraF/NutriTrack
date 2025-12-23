@@ -2,8 +2,12 @@ package com.example.nutritrack.presentation.food
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutritrack.data.remote.Result
+import com.example.nutritrack.data.repository.ApiFoodRepository
 import com.example.nutritrack.data.repository.FoodRepository
 import com.example.nutritrack.domain.model.Food
+import com.example.nutritrack.domain.model.NutritionInfo
+import com.example.nutritrack.domain.model.ServingSize
 import com.example.nutritrack.domain.model.UiState
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,11 +19,14 @@ data class FoodUiState(
     val calculatedCalories: Float = 0f,
     val calculatedProtein: Float = 0f,
     val calculatedCarbs: Float = 0f,
-    val calculatedFat: Float = 0f
+    val calculatedFat: Float = 0f,
+    val isSearching: Boolean = false,
+    val searchError: String? = null
 )
 
 class FoodViewModel(
-    private val foodRepository: FoodRepository
+    private val foodRepository: FoodRepository,
+    private val apiFoodRepository: ApiFoodRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FoodUiState())
@@ -38,31 +45,144 @@ class FoodViewModel(
     fun loadAllFoods() {
         viewModelScope.launch {
             _foodsState.value = UiState.Loading
+
+            // Try to load from Room first for offline support
             foodRepository.getAllFoods()
                 .catch { e ->
-                    _foodsState.value = UiState.Error(e.message ?: "Failed to load foods")
+                    android.util.Log.e("FoodViewModel", "Failed to load from Room", e)
                 }
-                .collect { foods ->
-                    _foodsState.value = UiState.Success(foods)
+                .collect { localFoods ->
+                    if (localFoods.isNotEmpty()) {
+                        _foodsState.value = UiState.Success(localFoods)
+                    }
+                }
+
+            // Also fetch from backend to get latest data
+            fetchFoodsFromBackend()
+        }
+    }
+
+    private fun fetchFoodsFromBackend() {
+        viewModelScope.launch {
+            apiFoodRepository.searchFoods(limit = 100)
+                .collect { result ->
+                    when (result) {
+                        is Result.Loading -> {
+                            android.util.Log.d("FoodViewModel", "Loading foods from backend...")
+                        }
+                        is Result.Success -> {
+                            android.util.Log.d("FoodViewModel", "Fetched ${result.data.foods.size} foods from backend")
+
+                            // Convert DTOs to domain models
+                            val foods = result.data.foods.map { dto ->
+                                Food(
+                                    foodId = dto.id,
+                                    name = dto.name,
+                                    nameIndonesian = dto.nameIndonesian,
+                                    category = dto.category,
+                                    nutrition = NutritionInfo(
+                                        calories = dto.nutrition.calories.toFloat(),
+                                        protein = dto.nutrition.protein.toFloat(),
+                                        carbs = dto.nutrition.carbs.toFloat(),
+                                        fat = dto.nutrition.fat.toFloat(),
+                                        fiber = dto.nutrition.fiber.toFloat(),
+                                        sugar = dto.nutrition.sugar.toFloat(),
+                                        sodium = dto.nutrition.sodium.toFloat()
+                                    ),
+                                    servingSize = ServingSize(
+                                        amount = dto.servingSize.amount.toFloat(),
+                                        unit = dto.servingSize.unit
+                                    ),
+                                    barcode = dto.barcode,
+                                    imageUrl = dto.imageUrl,
+                                    isVerified = dto.isVerified,
+                                    source = dto.source
+                                )
+                            }
+
+                            _foodsState.value = UiState.Success(foods)
+                        }
+                        is Result.Error -> {
+                            android.util.Log.e("FoodViewModel", "Failed to fetch from backend: ${result.message}")
+                            // Keep showing local data if available
+                        }
+                    }
                 }
         }
     }
 
     fun searchFoods(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
+        _uiState.update { it.copy(searchQuery = query, isSearching = true, searchError = null) }
 
         if (query.isBlank()) {
             _searchResults.value = emptyList()
+            _uiState.update { it.copy(isSearching = false) }
             return
         }
 
         viewModelScope.launch {
-            foodRepository.searchFoods(query)
-                .catch { e ->
-                    _searchResults.value = emptyList()
-                }
-                .collect { results ->
-                    _searchResults.value = results
+            android.util.Log.d("FoodViewModel", "Searching foods: query=$query")
+
+            // Try backend API first
+            apiFoodRepository.searchFoods(query = query, limit = 20)
+                .collect { result ->
+                    when (result) {
+                        is Result.Loading -> {
+                            android.util.Log.d("FoodViewModel", "Searching...")
+                        }
+                        is Result.Success -> {
+                            android.util.Log.d("FoodViewModel", "Found ${result.data.foods.size} foods")
+
+                            val foods = result.data.foods.map { dto ->
+                                Food(
+                                    foodId = dto.id,
+                                    name = dto.name,
+                                    nameIndonesian = dto.nameIndonesian,
+                                    category = dto.category,
+                                    nutrition = NutritionInfo(
+                                        calories = dto.nutrition.calories.toFloat(),
+                                        protein = dto.nutrition.protein.toFloat(),
+                                        carbs = dto.nutrition.carbs.toFloat(),
+                                        fat = dto.nutrition.fat.toFloat(),
+                                        fiber = dto.nutrition.fiber.toFloat(),
+                                        sugar = dto.nutrition.sugar.toFloat(),
+                                        sodium = dto.nutrition.sodium.toFloat()
+                                    ),
+                                    servingSize = ServingSize(
+                                        amount = dto.servingSize.amount.toFloat(),
+                                        unit = dto.servingSize.unit
+                                    ),
+                                    barcode = dto.barcode,
+                                    imageUrl = dto.imageUrl,
+                                    isVerified = dto.isVerified,
+                                    source = dto.source
+                                )
+                            }
+
+                            _searchResults.value = foods
+                            _uiState.update { it.copy(isSearching = false) }
+                        }
+                        is Result.Error -> {
+                            android.util.Log.e("FoodViewModel", "Search error: ${result.message}")
+
+                            // Fallback to local search
+                            foodRepository.searchFoods(query)
+                                .catch { e ->
+                                    android.util.Log.e("FoodViewModel", "Local search failed", e)
+                                    _searchResults.value = emptyList()
+                                    _uiState.update {
+                                        it.copy(
+                                            isSearching = false,
+                                            searchError = "Search failed: ${result.message}"
+                                        )
+                                    }
+                                }
+                                .collect { localResults ->
+                                    _searchResults.value = localResults
+                                    _uiState.update { it.copy(isSearching = false) }
+                                }
+                        }
+                    }
                 }
         }
     }

@@ -70,6 +70,42 @@ interface NutriTrackApiService {
         @Path("id") foodId: String
     ): Response<Map<String, String>>
 
+    // ===== MEAL ENDPOINTS =====
+
+    @POST("api/v1/meals")
+    suspend fun createMeal(
+        @Body request: CreateMealRequest
+    ): Response<MealResponse>
+
+    @GET("api/v1/meals/{id}")
+    suspend fun getMeal(
+        @Path("id") mealId: String
+    ): Response<MealResponse>
+
+    @PUT("api/v1/meals/{id}")
+    suspend fun updateMeal(
+        @Path("id") mealId: String,
+        @Body request: UpdateMealRequest
+    ): Response<MealResponse>
+
+    @DELETE("api/v1/meals/{id}")
+    suspend fun deleteMeal(
+        @Path("id") mealId: String
+    ): Response<Map<String, String>>
+
+    // ===== DAILY LOG ENDPOINTS =====
+
+    @GET("api/v1/daily-logs")
+    suspend fun getDailyLogs(
+        @Query("start_date") startDate: String? = null,
+        @Query("end_date") endDate: String? = null
+    ): Response<DailyLogsResponse>
+
+    @GET("api/v1/daily-logs/{date}")
+    suspend fun getDailyLog(
+        @Path("date") date: String
+    ): Response<DailyLogResponse>
+
     // ===== HEALTH CHECK =====
 
     @GET("health")

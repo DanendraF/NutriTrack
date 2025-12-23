@@ -38,6 +38,7 @@ import com.example.nutritrack.TipsScreen
 import com.example.nutritrack.presentation.profile.ProfileScreen
 import com.example.nutritrack.presentation.settings.SettingsScreen
 import com.example.nutritrack.presentation.meal.AddMealScreen
+import com.example.nutritrack.presentation.food.FoodSearchScreen
 
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 
@@ -171,6 +172,20 @@ fun MainAppLayout() {
             // Add Meal Screen
             composable("add_meal") {
                 AddMealScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Food Search Screen
+            composable("food_search") {
+                FoodSearchScreen(
+                    onFoodSelected = { food ->
+                        // Navigate to food details/logging
+                        // For now, just go back
+                        navController.popBackStack()
+                    },
                     onNavigateBack = {
                         navController.popBackStack()
                     }

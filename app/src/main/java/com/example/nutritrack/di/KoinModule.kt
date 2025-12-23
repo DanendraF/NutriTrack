@@ -104,13 +104,14 @@ val appModule = module {
     // API Repositories
     single { ApiUserRepository(get()) }
     single { ApiFoodRepository(get()) }
+    single { ApiMealRepository(get()) }
 
     // ===== VIEWMODELS =====
     viewModel { AuthViewModel() }
     viewModel { FirebaseAuthViewModel(get()) }
     viewModel { OnboardingViewModel(get(), get(), get()) }
-    viewModel { HomeViewModel(get(), get()) }
-    viewModel { FoodViewModel(get()) }
+    viewModel { HomeViewModel(get(), get(), get()) } // Added ApiMealRepository
+    viewModel { FoodViewModel(get(), get()) } // Added ApiFoodRepository
     viewModel { MealViewModel(get()) }
     viewModel { ProfileViewModel(get(), get()) }
 }

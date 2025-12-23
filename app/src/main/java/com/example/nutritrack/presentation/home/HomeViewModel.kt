@@ -2,6 +2,8 @@ package com.example.nutritrack.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutritrack.data.remote.Result
+import com.example.nutritrack.data.repository.ApiMealRepository
 import com.example.nutritrack.data.repository.FirestoreMealRepository
 import com.example.nutritrack.data.repository.UserRepository
 import com.example.nutritrack.domain.model.Meal
@@ -10,6 +12,8 @@ import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.utils.DateUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Date
 
 data class HomeUiState(
@@ -26,12 +30,14 @@ data class HomeUiState(
     val consumedCarbs: Int = 0,
     val consumedFat: Int = 0,
     val todayMeals: List<Meal> = emptyList(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val error: String? = null
 )
 
 class HomeViewModel(
     private val userRepository: UserRepository,
-    private val firestoreMealRepository: FirestoreMealRepository
+    private val firestoreMealRepository: FirestoreMealRepository,
+    private val apiMealRepository: ApiMealRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -80,13 +86,70 @@ class HomeViewModel(
 
     private fun loadTodayMeals(userId: String) {
         viewModelScope.launch {
+            android.util.Log.d("HomeViewModel", "=== loadTodayMeals called ===")
+            android.util.Log.d("HomeViewModel", "userId: $userId")
+
+            // Get today's date in YYYY-MM-DD format
+            val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            android.util.Log.d("HomeViewModel", "Fetching daily log for: $today")
+
+            // Fetch from backend API
+            apiMealRepository.getDailyLog(today)
+                .collect { result ->
+                    when (result) {
+                        is Result.Loading -> {
+                            android.util.Log.d("HomeViewModel", "Loading daily log...")
+                            _uiState.update { it.copy(isLoading = true) }
+                        }
+                        is Result.Success -> {
+                            val dailyLog = result.data
+                            android.util.Log.d("HomeViewModel", "SUCCESS! Got ${dailyLog.meals.size} meals")
+                            android.util.Log.d("HomeViewModel", "Total calories: ${dailyLog.totalCalories}")
+
+                            val totalCalories = dailyLog.totalCalories.toInt()
+                            val totalProtein = dailyLog.totalProtein.toInt()
+                            val totalCarbs = dailyLog.totalCarbs.toInt()
+                            val totalFat = dailyLog.totalFat.toInt()
+
+                            _uiState.update { state ->
+                                val remaining = (state.targetCalories - totalCalories).coerceAtLeast(0)
+                                val progress = if (state.targetCalories > 0) {
+                                    ((totalCalories.toFloat() / state.targetCalories) * 100).toInt().coerceAtMost(100)
+                                } else 0
+
+                                state.copy(
+                                    consumedCalories = totalCalories,
+                                    consumedProtein = totalProtein,
+                                    consumedCarbs = totalCarbs,
+                                    consumedFat = totalFat,
+                                    remainingCalories = remaining,
+                                    progressPercentage = progress,
+                                    isLoading = false,
+                                    error = null
+                                )
+                            }
+                        }
+                        is Result.Error -> {
+                            android.util.Log.e("HomeViewModel", "ERROR loading daily log: ${result.message}")
+
+                            // Fallback to Firestore/Room
+                            loadTodayMealsFromLocal(userId)
+                        }
+                    }
+                }
+        }
+    }
+
+    private fun loadTodayMealsFromLocal(userId: String) {
+        viewModelScope.launch {
+            android.util.Log.d("HomeViewModel", "Falling back to local data...")
+
             firestoreMealRepository.getTodaysMeals(userId)
                 .catch { e: Throwable ->
-                    // Handle error but don't crash
-                    e.printStackTrace()
+                    android.util.Log.e("HomeViewModel", "Local fetch also failed", e)
+                    _uiState.update { it.copy(isLoading = false, error = "Failed to load meals") }
                 }
                 .collect { meals: List<Meal> ->
-                    // Calculate totals from meals
                     val totalCalories = meals.sumOf { meal -> meal.calories }
                     val totalProtein = meals.sumOf { meal -> meal.protein }
                     val totalCarbs = meals.sumOf { meal -> meal.carbs }
@@ -99,7 +162,6 @@ class HomeViewModel(
                         } else 0
 
                         state.copy(
-                            todayMeals = meals,
                             consumedCalories = totalCalories,
                             consumedProtein = totalProtein,
                             consumedCarbs = totalCarbs,
