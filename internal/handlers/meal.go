@@ -1,64 +1,96 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
+
+	"github.com/nutritrack/backend/internal/models"
+	"github.com/nutritrack/backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetMeals(c *gin.Context) {
-	userID, _ := c.Get("userID")
-
-	// TODO: Fetch meals from Firestore
-	c.JSON(http.StatusOK, gin.H{
-		"user_id": userID,
-		"meals":   []interface{}{},
-		"message": "Get meals - to be implemented",
-	})
+type MealHandler struct {
+	mealRepo *repository.MealRepository
 }
 
-func CreateMeal(c *gin.Context) {
-	userID, _ := c.Get("userID")
-
-	// TODO: Create meal in Firestore
-	c.JSON(http.StatusCreated, gin.H{
-		"user_id": userID,
-		"message": "Create meal - to be implemented",
-	})
+func NewMealHandler(mealRepo *repository.MealRepository) *MealHandler {
+	return &MealHandler{
+		mealRepo: mealRepo,
+	}
 }
 
-func GetMeal(c *gin.Context) {
+// CreateMeal creates a new meal entry
+func (h *MealHandler) CreateMeal(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req models.CreateMealRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Printf("📝 Creating meal for user %s: %s (%.1f portions)", userID, req.FoodName, req.Portion)
+
+	meal, err := h.mealRepo.CreateMeal(c.Request.Context(), userID.(string), &req)
+	if err != nil {
+		log.Printf("❌ Failed to create meal: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create meal"})
+		return
+	}
+
+	log.Printf("✅ Meal created: %s", meal.ID)
+	c.JSON(http.StatusCreated, meal)
+}
+
+// GetMeal gets a specific meal by ID
+func (h *MealHandler) GetMeal(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	mealID := c.Param("id")
 
-	// TODO: Fetch meal from Firestore
-	c.JSON(http.StatusOK, gin.H{
-		"user_id": userID,
-		"meal_id": mealID,
-		"message": "Get meal - to be implemented",
-	})
+	meal, err := h.mealRepo.GetMeal(c.Request.Context(), userID.(string), mealID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Meal not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, meal)
 }
 
-func UpdateMeal(c *gin.Context) {
+// UpdateMeal updates an existing meal
+func (h *MealHandler) UpdateMeal(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	mealID := c.Param("id")
 
-	// TODO: Update meal in Firestore
-	c.JSON(http.StatusOK, gin.H{
-		"user_id": userID,
-		"meal_id": mealID,
-		"message": "Update meal - to be implemented",
-	})
+	var req models.UpdateMealRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	meal, err := h.mealRepo.UpdateMeal(c.Request.Context(), userID.(string), mealID, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update meal"})
+		return
+	}
+
+	c.JSON(http.StatusOK, meal)
 }
 
-func DeleteMeal(c *gin.Context) {
+// DeleteMeal deletes a meal
+func (h *MealHandler) DeleteMeal(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	mealID := c.Param("id")
 
-	// TODO: Delete meal from Firestore
-	c.JSON(http.StatusOK, gin.H{
-		"user_id": userID,
-		"meal_id": mealID,
-		"message": "Delete meal - to be implemented",
-	})
+	err := h.mealRepo.DeleteMeal(c.Request.Context(), userID.(string), mealID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete meal"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Meal deleted successfully"})
 }

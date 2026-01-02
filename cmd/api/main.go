@@ -70,6 +70,11 @@ func main() {
 		log.Fatalf("❌ Failed to initialize food repository: %v", err)
 	}
 	defer foodRepo.Close()
+
+	mealRepo, err := repository.NewMealRepository(firebaseApp)
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize meal repository: %v", err)
+	}
 	log.Println("✅ Repositories initialized")
 
 	// Seed food database
@@ -82,6 +87,8 @@ func main() {
 	log.Println("🔧 Initializing handlers...")
 	userHandler := handlers.NewUserHandler(userRepo)
 	foodHandler := handlers.NewFoodHandler(foodRepo)
+	mealHandler := handlers.NewMealHandler(mealRepo)
+	dailyLogHandler := handlers.NewDailyLogHandler(mealRepo)
 	log.Println("✅ Handlers initialized")
 
 	// Set Gin mode
@@ -127,21 +134,20 @@ func main() {
 				users.DELETE("/me", userHandler.DeleteUser)     // Delete account
 			}
 
-			// Meal routes (TODO: implement)
+			// Meal routes
 			meals := auth.Group("/meals")
 			{
-				meals.GET("", handlers.GetMeals)
-				meals.POST("", handlers.CreateMeal)
-				meals.GET("/:id", handlers.GetMeal)
-				meals.PUT("/:id", handlers.UpdateMeal)
-				meals.DELETE("/:id", handlers.DeleteMeal)
+				meals.POST("", mealHandler.CreateMeal)
+				meals.GET("/:id", mealHandler.GetMeal)
+				meals.PUT("/:id", mealHandler.UpdateMeal)
+				meals.DELETE("/:id", mealHandler.DeleteMeal)
 			}
 
-			// Daily log routes (TODO: implement)
+			// Daily log routes
 			dailyLogs := auth.Group("/daily-logs")
 			{
-				dailyLogs.GET("", handlers.GetDailyLogs)
-				dailyLogs.GET("/:date", handlers.GetDailyLog)
+				dailyLogs.GET("", dailyLogHandler.GetDailyLogs)
+				dailyLogs.GET("/:date", dailyLogHandler.GetDailyLog)
 			}
 
 			// Food routes
