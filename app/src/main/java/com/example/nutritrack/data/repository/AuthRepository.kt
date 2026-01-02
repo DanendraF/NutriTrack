@@ -27,15 +27,25 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun login(email: String, password: String): AuthResult {
         return try {
+            android.util.Log.d("AuthRepository", "Attempting login for: $email")
             val result = firebaseAuth.signInWithEmailAndPassword(email, password).await()
             val userId = result.user?.uid
             if (userId != null) {
+                android.util.Log.d("AuthRepository", "Login successful: $userId")
                 AuthResult.Success(userId)
             } else {
+                android.util.Log.e("AuthRepository", "Login failed: User ID is null")
                 AuthResult.Error("Login failed: User ID is null")
             }
         } catch (e: Exception) {
-            AuthResult.Error(e.message ?: "Login failed")
+            android.util.Log.e("AuthRepository", "Login error: ${e.message}", e)
+            val errorMessage = when {
+                e.message?.contains("network") == true -> "Network error. Check your internet connection."
+                e.message?.contains("password") == true -> "Incorrect email or password"
+                e.message?.contains("user") == true -> "User not found. Please register first."
+                else -> e.message ?: "Login failed. Please try again."
+            }
+            AuthResult.Error(errorMessage)
         }
     }
 

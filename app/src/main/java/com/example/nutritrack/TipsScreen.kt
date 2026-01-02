@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,54 +22,72 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.nutritrack.domain.model.Tip
+import com.example.nutritrack.presentation.tips.TipsViewModel
 import com.example.nutritrack.ui.theme.*
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun TipsScreen() {
-    // Definisikan data di awal agar bisa diakses oleh beberapa 'items' block
-    val dummyNewTips = remember { listOf(Tip(1, "Add vegetables to each portion", "choose fresh green vegetables"), Tip(2, "Drink more water", "at least 8 glasses a day")) }
-    val dummyArticles = remember { listOf(Article(1, "The Benefits of a Balanced Diet", "Nutrition", "5 min read", ""), Article(2, "Simple Exercises for a Healthy Heart", "Fitness", "7 min read", "")) }
+fun TipsScreen(
+    viewModel: TipsViewModel = koinViewModel()
+) {
+    val tips by viewModel.tips.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    val dummyArticles = remember {
+        listOf(
+            Article(1, "The Benefits of a Balanced Diet", "Nutrition", "5 min read", ""),
+            Article(2, "Simple Exercises for a Healthy Heart", "Fitness", "7 min read", "")
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundGray),
         contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp) // Mengurangi spasi agar lebih konsisten
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Item 1: Top Bar
         item {
             TipsTopBar()
-            Spacer(modifier = Modifier.height(8.dp)) // Menambah spasi tambahan setelah TopBar
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Item 2: Daily Recommends
         item { DailyRecommendsCard() }
 
-        // --- PERBAIKAN STRUKTUR DAFTAR ---
-
-        // Item 3: Judul untuk "New Tips"
         item {
             Text(
-                text = "New Tips",
+                text = "Health Tips",
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp,
                 color = TextBlack,
-                modifier = Modifier.padding(top = 8.dp) // Beri sedikit spasi atas
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 
-        // Item 4: Daftar "New Tips" menggunakan items()
-        items(dummyNewTips) { tip ->
-            NewTipItem(tip = tip)
+        if (isLoading) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = DarkGreen)
+                }
+            }
+        } else if (tips.isEmpty()) {
+            item {
+                Text(
+                    text = "No tips available",
+                    fontSize = 14.sp,
+                    color = TextGray,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        } else {
+            items(tips) { tip ->
+                NewTipItem(tip = tip)
+            }
         }
 
-        // ---------------------------------
-
-        // Item 5: Judul untuk Artikel
         item { HealthyLivingArticlesSection() }
 
-        // Item 6: Daftar Artikel
         items(dummyArticles) { article ->
             ArticleItem(article = article)
         }
@@ -87,7 +107,12 @@ private fun TipsTopBar() {
 
 @Composable
 private fun DailyRecommendsCard() {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = CardBackground), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Daily Recommends", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = TextBlack)
             Text("Quick ideas to improve daily nutrition", fontSize = 12.sp, color = TextGray)
@@ -110,12 +135,16 @@ private fun ChipInfo(text: String, modifier: Modifier = Modifier) {
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = DarkGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, lineHeight = 14.sp, textAlign = TextAlign.Center)
+        Text(
+            text,
+            color = DarkGreen,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 14.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }
-
-// Fungsi NewTipsCard() sudah tidak diperlukan lagi, jadi bisa dihapus.
-// Logikanya sudah diintegrasikan ke dalam LazyColumn.
 
 @Composable
 private fun NewTipItem(tip: Tip) {
@@ -127,18 +156,32 @@ private fun NewTipItem(tip: Tip) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = Icons.Default.Eco, contentDescription = "Tip Icon", tint = DarkGreen, modifier = Modifier.size(32.dp).background(Color.White, CircleShape).padding(6.dp))
+        Icon(
+            imageVector = Icons.Default.Eco,
+            contentDescription = "Tip Icon",
+            tint = DarkGreen,
+            modifier = Modifier
+                .size(32.dp)
+                .background(Color.White, CircleShape)
+                .padding(6.dp)
+        )
         Spacer(modifier = Modifier.width(16.dp))
         Column {
             Text(tip.title, fontWeight = FontWeight.Bold, color = TextBlack)
-            Text(tip.subtitle, fontSize = 12.sp, color = TextGray)
+            Text(tip.description, fontSize = 12.sp, color = TextGray)
         }
     }
 }
 
 @Composable
 private fun HealthyLivingArticlesSection() {
-    Text(text = "Healthy Living Articles", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextBlack, modifier = Modifier.padding(top = 8.dp))
+    Text(
+        text = "Healthy Living Articles",
+        fontSize = 18.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = TextBlack,
+        modifier = Modifier.padding(top = 8.dp)
+    )
 }
 
 @Composable
@@ -151,11 +194,22 @@ private fun ArticleItem(article: Article) {
         onClick = { /* TODO: Handle article click */ }
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(Color.LightGray))
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.LightGray)
+            )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(article.category, fontSize = 12.sp, color = DarkGreen, fontWeight = FontWeight.SemiBold)
-                Text(article.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextBlack, lineHeight = 20.sp)
+                Text(
+                    article.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextBlack,
+                    lineHeight = 20.sp
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(article.readTime, fontSize = 12.sp, color = TextGray)
             }
@@ -163,8 +217,13 @@ private fun ArticleItem(article: Article) {
     }
 }
 
-private data class Tip(val id: Int, val title: String, val subtitle: String)
-private data class Article(val id: Int, val title: String, val category: String, val readTime: String, val imageUrl: String)
+private data class Article(
+    val id: Int,
+    val title: String,
+    val category: String,
+    val readTime: String,
+    val imageUrl: String
+)
 
 @Preview(showBackground = true)
 @Composable

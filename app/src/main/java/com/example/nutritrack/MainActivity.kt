@@ -194,7 +194,7 @@ fun MainAppLayout() {
             composable(Screen.Food.route) {
                 FoodScreen(
                     onNavigateToFoodSearch = {
-                        navController.navigate("food_search")
+                        navController.navigate("food_search_standalone")
                     }
                 )
             }
@@ -260,6 +260,37 @@ fun MainAppLayout() {
             // Settings Screen
             composable("settings") {
                 SettingsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Standalone Food Search (from FoodScreen)
+            composable("food_search_standalone") {
+                val userSavedFoodViewModel: com.example.nutritrack.presentation.food.UserSavedFoodViewModel =
+                    org.koin.androidx.compose.koinViewModel()
+                val firebaseAuth: com.google.firebase.auth.FirebaseAuth = org.koin.androidx.compose.get()
+
+                FoodSearchScreen(
+                    onFoodSelected = { food ->
+                        // Create UserSavedFood object and save
+                        val userId = firebaseAuth.currentUser?.uid ?: return@FoodSearchScreen
+                        val savedFood = com.example.nutritrack.domain.model.UserSavedFood(
+                            id = "${userId}_${food.foodId}",
+                            userId = userId,
+                            foodId = food.foodId,
+                            foodName = food.name,
+                            servingSize = "${food.servingSize.amount} ${food.servingSize.unit}",
+                            calories = food.nutrition.calories.toInt(),
+                            protein = food.nutrition.protein.toFloat(),
+                            carbs = food.nutrition.carbs.toFloat(),
+                            fat = food.nutrition.fat.toFloat()
+                        )
+                        userSavedFoodViewModel.saveFood(savedFood)
+                        // Navigate back to FoodScreen
+                        navController.popBackStack()
+                    },
                     onNavigateBack = {
                         navController.popBackStack()
                     }
