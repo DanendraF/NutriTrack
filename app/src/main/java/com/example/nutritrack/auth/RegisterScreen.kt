@@ -1,13 +1,14 @@
 package com.example.nutritrack.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,7 +25,6 @@ import org.koin.androidx.compose.koinViewModel
 import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.ui.theme.DarkGreen
-import com.example.nutritrack.ui.theme.LightGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
 
@@ -36,8 +37,8 @@ fun RegisterScreen(
     val authState by viewModel.authState.collectAsState()
     val registerState by viewModel.registerState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var passwordVisible by remember { mutableStateOf(false) }
 
-    // Handle register state changes
     LaunchedEffect(registerState) {
         when (registerState) {
             is UiState.Success -> {
@@ -61,126 +62,158 @@ fun RegisterScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .padding(horizontal = 24.dp)
+                .background(Color(0xFFF5F9F9))
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header
+            Spacer(modifier = Modifier.height(60.dp))
+
+            // Header Logo
             Text(
-                text = "Buat Akun Baru",
-                fontSize = 32.sp,
+                text = "VENTURES",
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = DarkGreen
+                color = DarkGreen,
+                letterSpacing = 2.sp
             )
             Text(
-                text = "Daftar untuk memulai gaya hidup sehatmu",
-                fontSize = 16.sp,
-                color = TextGray,
-                modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
-            )
-
-            val textFieldColors = TextFieldDefaults.colors(
-                focusedContainerColor = LightGreen.copy(alpha = 0.1f),
-                unfocusedContainerColor = Color.Transparent,
-                focusedIndicatorColor = DarkGreen,
-                unfocusedIndicatorColor = TextGray.copy(alpha = 0.5f),
-                cursorColor = DarkGreen,
-                focusedLeadingIconColor = DarkGreen,
-                unfocusedLeadingIconColor = TextGray,
-            )
-
-            // Username Field
-            TextField(
-                value = authState.username,
-                onValueChange = { viewModel.updateUsername(it) },
-                label = { Text("Username") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username Icon") },
-                isError = authState.usernameError != null,
-                supportingText = {
-                    authState.usernameError?.let { error ->
-                        Text(text = error, color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                colors = textFieldColors
+                text = "PARTNERS",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Light,
+                color = DarkGreen,
+                letterSpacing = 4.sp
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Email Field
-            TextField(
-                value = authState.email,
-                onValueChange = { viewModel.updateEmail(it) },
-                label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email Icon") },
-                isError = authState.emailError != null,
-                supportingText = {
-                    authState.emailError?.let { error ->
-                        Text(text = error, color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                colors = textFieldColors
+            Text(
+                text = "Create Account",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            // Password Field
-            TextField(
-                value = authState.password,
-                onValueChange = { viewModel.updatePassword(it) },
-                label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password Icon") },
-                isError = authState.passwordError != null,
-                supportingText = {
-                    authState.passwordError?.let { error ->
-                        Text(text = error, color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                colors = textFieldColors
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Register Button
-            Button(
-                onClick = { viewModel.register() },
+            // Form Card
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
-                shape = MaterialTheme.shapes.medium,
-                enabled = registerState !is UiState.Loading
+                    .padding(horizontal = 24.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                if (registerState is UiState.Loading) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(24.dp)
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Username Field
+                    OutlinedTextField(
+                        value = authState.username,
+                        onValueChange = { viewModel.updateUsername(it) },
+                        label = { Text("Username", color = TextGray) },
+                        placeholder = { Text("Enter your username", color = TextGray.copy(alpha = 0.5f)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = DarkGreen,
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = DarkGreen,
+                            focusedLabelColor = DarkGreen
+                        )
                     )
-                } else {
-                    Text("Daftar", fontSize = 18.sp)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Email Field
+                    OutlinedTextField(
+                        value = authState.email,
+                        onValueChange = { viewModel.updateEmail(it) },
+                        label = { Text("Email", color = TextGray) },
+                        placeholder = { Text("Enter your email", color = TextGray.copy(alpha = 0.5f)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        singleLine = true,
+                        isError = authState.emailError != null,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = DarkGreen,
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = DarkGreen,
+                            focusedLabelColor = DarkGreen
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Password Field
+                    OutlinedTextField(
+                        value = authState.password,
+                        onValueChange = { viewModel.updatePassword(it) },
+                        label = { Text("Password", color = TextGray) },
+                        placeholder = { Text("Enter your password", color = TextGray.copy(alpha = 0.5f)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true,
+                        isError = authState.passwordError != null,
+                        shape = RoundedCornerShape(12.dp),
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    tint = TextGray
+                                )
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = DarkGreen,
+                            unfocusedBorderColor = Color.LightGray,
+                            cursorColor = DarkGreen,
+                            focusedLabelColor = DarkGreen
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Register Button
+                    Button(
+                        onClick = { viewModel.register() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = registerState !is UiState.Loading
+                    ) {
+                        if (registerState is UiState.Loading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text("Sign Up", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Login Link
             Row(
-                modifier = Modifier.padding(top = 24.dp),
+                modifier = Modifier.padding(bottom = 32.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Sudah punya akun?", color = TextGray)
+                Text("Already have an account? ", color = TextGray, fontSize = 14.sp)
                 TextButton(
                     onClick = onNavigateToLogin,
                     colors = ButtonDefaults.textButtonColors(contentColor = DarkGreen)
                 ) {
-                    Text("Masuk di sini", fontWeight = FontWeight.Bold)
+                    Text("Sign in", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }

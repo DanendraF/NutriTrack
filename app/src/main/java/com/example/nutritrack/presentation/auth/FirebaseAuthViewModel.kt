@@ -2,6 +2,7 @@ package com.example.nutritrack.presentation.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.nutritrack.data.local.preferences.AuthPreferences
 import com.example.nutritrack.data.repository.AuthRepository
 import com.example.nutritrack.data.repository.AuthResult
 import com.example.nutritrack.domain.model.UiState
@@ -10,7 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class FirebaseAuthViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val authPreferences: AuthPreferences
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow(AuthState())
@@ -27,11 +29,15 @@ class FirebaseAuthViewModel(
     }
 
     private fun checkUserLoggedIn() {
-        if (authRepository.isUserLoggedIn()) {
+        // Check both Firebase and SharedPreferences for persistent login
+        if (authRepository.isUserLoggedIn() && authPreferences.isLoggedIn()) {
             val userId = authRepository.getCurrentUser()?.uid
             if (userId != null) {
                 _loginState.value = UiState.Success(userId)
             }
+        } else if (authPreferences.isLoggedIn()) {
+            // SharedPreferences says logged in but Firebase doesn't - clear prefs
+            authPreferences.clearLoginState()
         }
     }
 
@@ -89,6 +95,8 @@ class FirebaseAuthViewModel(
 
             when (val result = authRepository.login(state.email, state.password)) {
                 is AuthResult.Success -> {
+                    // Save login state to SharedPreferences for persistent login
+                    authPreferences.saveLoginState(result.userId, state.email)
                     _loginState.value = UiState.Success(result.userId)
                 }
                 is AuthResult.Error -> {
@@ -122,6 +130,8 @@ class FirebaseAuthViewModel(
                 username = state.username
             )) {
                 is AuthResult.Success -> {
+                    // Save login state to SharedPreferences for persistent login
+                    authPreferences.saveLoginState(result.userId, state.email)
                     _registerState.value = UiState.Success(result.userId)
                 }
                 is AuthResult.Error -> {
@@ -133,6 +143,8 @@ class FirebaseAuthViewModel(
 
     fun logout() {
         viewModelScope.launch {
+            // Clear login state from SharedPreferences
+            authPreferences.clearLoginState()
             authRepository.logout()
             _loginState.value = UiState.Idle
             _registerState.value = UiState.Idle
