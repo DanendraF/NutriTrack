@@ -49,16 +49,11 @@ fun HomeScreen(
     val deleteMealState by mealViewModel.deleteMealState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Initialize userId and refresh on every screen appearance
-    LaunchedEffect(key1 = Unit) {
+    // Initialize userId
+    LaunchedEffect(Unit) {
         authViewModel.getCurrentUserId()?.let { userId ->
             viewModel.setUserId(userId)
         }
-    }
-
-    // Refresh data when returning to this screen
-    LaunchedEffect(key1 = true) {
-        viewModel.refreshData()
     }
 
     // Handle delete result

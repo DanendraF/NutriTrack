@@ -27,7 +27,6 @@ import com.example.nutritrack.ui.theme.DarkGreen
 @Composable
 fun AddMealScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToFoodSearch: () -> Unit = {},
     viewModel: MealViewModel = koinViewModel(),
     authViewModel: FirebaseAuthViewModel = koinViewModel()
 ) {
@@ -80,23 +79,6 @@ fun AddMealScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Search Food Button
-            OutlinedButton(
-                onClick = onNavigateToFoodSearch,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color.Transparent
-                )
-            ) {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Search Food from Database")
-            }
-
             // Food Name
             OutlinedTextField(
                 value = uiState.foodName,

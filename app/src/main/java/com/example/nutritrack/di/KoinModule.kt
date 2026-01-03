@@ -11,7 +11,6 @@ import com.example.nutritrack.data.repository.ApiFoodRepository
 import com.example.nutritrack.presentation.auth.AuthViewModel
 import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.presentation.food.FoodViewModel
-import com.example.nutritrack.presentation.food.UserSavedFoodViewModel
 import com.example.nutritrack.presentation.home.HomeViewModel
 import com.example.nutritrack.presentation.meal.MealViewModel
 import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
@@ -35,9 +34,6 @@ val appModule = module {
     single { FirebaseAuth.getInstance() }
     single { FirebaseFirestore.getInstance() }
     single { FirebaseStorage.getInstance() }
-
-    // ===== PREFERENCES =====
-    single { com.example.nutritrack.data.local.preferences.AuthPreferences(androidContext()) }
 
     // ===== NETWORK =====
     // HTTP Logging Interceptor
@@ -75,7 +71,7 @@ val appModule = module {
     // Retrofit
     single {
         Retrofit.Builder()
-            .baseUrl("http://192.168.1.41:8080/")
+            .baseUrl("http://192.168.100.250:8080/")
             .client(get())
             .addConverterFactory(GsonConverterFactory.create(get()))
             .build()
@@ -104,10 +100,6 @@ val appModule = module {
     single<AuthRepository> { AuthRepositoryImpl(get()) }
     single { FirestoreUserRepository(get(), get()) }
     single { FirestoreMealRepository(get()) }
-    single<UserSavedFoodRepository> { FirestoreUserSavedFoodRepository(get()) }
-    single<com.example.nutritrack.data.repository.TipsRepository> {
-        com.example.nutritrack.data.repository.TipsRepositoryImpl(get())
-    }
 
     // API Repositories
     single { ApiUserRepository(get()) }
@@ -116,12 +108,10 @@ val appModule = module {
 
     // ===== VIEWMODELS =====
     viewModel { AuthViewModel() }
-    viewModel { FirebaseAuthViewModel(get(), get()) } // Added AuthPreferences
+    viewModel { FirebaseAuthViewModel(get()) }
     viewModel { OnboardingViewModel(get(), get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) } // Added ApiMealRepository
     viewModel { FoodViewModel(get(), get()) } // Added ApiFoodRepository
-    viewModel { UserSavedFoodViewModel(get(), get()) } // UserSavedFoodRepository + FirebaseAuth
     viewModel { MealViewModel(get()) }
     viewModel { ProfileViewModel(get(), get()) }
-    viewModel { com.example.nutritrack.presentation.tips.TipsViewModel(get()) }
 }
