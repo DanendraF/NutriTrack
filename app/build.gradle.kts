@@ -43,6 +43,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        mlModelBinding = true
     }
 }
 
@@ -59,6 +60,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.tensorflow.lite.gpu)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     // ===== NAVIGATION =====
@@ -96,6 +98,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended-android:1.6.8")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
     implementation("com.google.mlkit:image-labeling:17.0.8")
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+    implementation("org.tensorflow:tensorflow-lite:2.12.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // ===== FIREBASE =====
