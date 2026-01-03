@@ -7,6 +7,7 @@ import com.example.nutritrack.data.repository.ApiMealRepository
 import com.example.nutritrack.data.repository.FirestoreMealRepository
 import com.example.nutritrack.data.repository.UserRepository
 import com.example.nutritrack.domain.model.Meal
+import com.example.nutritrack.domain.model.MealType
 import com.example.nutritrack.domain.model.User
 import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.utils.DateUtils
@@ -14,7 +15,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.ZonedDateTime
 import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 data class HomeUiState(
     val userName: String = "",
@@ -111,6 +115,34 @@ class HomeViewModel(
                             val totalCarbs = dailyLog.totalCarbs.toInt()
                             val totalFat = dailyLog.totalFat.toInt()
 
+                            // Convert MealResponse list to Meal list
+                            val meals = dailyLog.meals.map { mealResponse ->
+                                // Parse RFC3339 timestamp from backend
+                                val timestamp = try {
+                                    val zonedDateTime = ZonedDateTime.parse(mealResponse.timestamp)
+                                    Date.from(zonedDateTime.toInstant())
+                                } catch (e: Exception) {
+                                    android.util.Log.e("HomeViewModel", "Failed to parse timestamp: ${mealResponse.timestamp}", e)
+                                    Date() // Fallback to current time
+                                }
+
+                                Meal(
+                                    id = mealResponse.id,
+                                    foodId = mealResponse.foodId,
+                                    foodName = mealResponse.foodName,
+                                    mealType = MealType.fromString(mealResponse.mealType),
+                                    quantity = mealResponse.portion.toFloat(),
+                                    servingSize = "100g", // Default
+                                    calories = mealResponse.nutrition.calories.toInt(),
+                                    protein = mealResponse.nutrition.protein.toInt(),
+                                    carbs = mealResponse.nutrition.carbs.toInt(),
+                                    fat = mealResponse.nutrition.fat.toInt(),
+                                    timestamp = timestamp
+                                )
+                            }
+
+                            android.util.Log.d("HomeViewModel", "Converted ${meals.size} meals to domain model")
+
                             _uiState.update { state ->
                                 val remaining = (state.targetCalories - totalCalories).coerceAtLeast(0)
                                 val progress = if (state.targetCalories > 0) {
@@ -124,6 +156,7 @@ class HomeViewModel(
                                     consumedFat = totalFat,
                                     remainingCalories = remaining,
                                     progressPercentage = progress,
+                                    todayMeals = meals,
                                     isLoading = false,
                                     error = null
                                 )
@@ -168,6 +201,7 @@ class HomeViewModel(
                             consumedFat = totalFat,
                             remainingCalories = remaining,
                             progressPercentage = progress,
+                            todayMeals = meals,
                             isLoading = false
                         )
                     }

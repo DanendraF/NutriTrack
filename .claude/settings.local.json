@@ -12,7 +12,8 @@
       "Bash(.binapi.exe)",
       "Bash(./bin/api.exe:*)",
       "Bash(Select-Object -First 100)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(timeout 120 ./gradlew:*)"
     ]
   }
 }
