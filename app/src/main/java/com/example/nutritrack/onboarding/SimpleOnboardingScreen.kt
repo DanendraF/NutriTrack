@@ -5,7 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +21,6 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SimpleOnboardingScreen(
     onOnboardingComplete: () -> Unit,
-    onBackToLogin: () -> Unit,
     viewModel: OnboardingViewModel = koinViewModel(),
     firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
@@ -46,18 +45,9 @@ fun SimpleOnboardingScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Complete Your Profile") },
-                navigationIcon = {
-                    IconButton(onClick = onBackToLogin) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to Login"
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
