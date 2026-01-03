@@ -22,7 +22,8 @@ interface AuthRepository {
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val authPreferences: com.example.nutritrack.data.local.preferences.AuthPreferences
 ) : AuthRepository {
 
     override suspend fun login(email: String, password: String): AuthResult {
@@ -72,7 +73,11 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        android.util.Log.d("AuthRepository", "Logging out user...")
         firebaseAuth.signOut()
+        // Only clear login state, keep onboarding completion flag
+        authPreferences.clearLoginState()
+        android.util.Log.d("AuthRepository", "Logout complete - Firebase signed out and login state cleared")
     }
 
     override fun getCurrentUser(): FirebaseUser? {

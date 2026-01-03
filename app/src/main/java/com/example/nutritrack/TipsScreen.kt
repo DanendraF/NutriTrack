@@ -3,6 +3,7 @@ package com.example.nutritrack
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,17 +13,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutritrack.domain.model.Tip
+import com.example.nutritrack.domain.model.DailyRecommend
+import com.example.nutritrack.domain.model.Article
 import com.example.nutritrack.presentation.tips.TipsViewModel
 import com.example.nutritrack.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
@@ -32,14 +33,9 @@ fun TipsScreen(
     viewModel: TipsViewModel = koinViewModel()
 ) {
     val tips by viewModel.tips.collectAsState()
+    val dailyRecommends by viewModel.dailyRecommends.collectAsState()
+    val articles by viewModel.articles.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-
-    val dummyArticles = remember {
-        listOf(
-            Article(1, "The Benefits of a Balanced Diet", "Nutrition", "5 min read", ""),
-            Article(2, "Simple Exercises for a Healthy Heart", "Fitness", "7 min read", "")
-        )
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -53,7 +49,9 @@ fun TipsScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        item { DailyRecommendsCard() }
+        item {
+            DailyRecommendsCard(dailyRecommends)
+        }
 
         item {
             Text(
@@ -82,14 +80,33 @@ fun TipsScreen(
             }
         } else {
             items(tips) { tip ->
-                NewTipItem(tip = tip)
+                TipItem(tip = tip)
             }
         }
 
-        item { HealthyLivingArticlesSection() }
+        item {
+            Text(
+                text = "Healthy Living Articles",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextBlack,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
 
-        items(dummyArticles) { article ->
-            ArticleItem(article = article)
+        if (articles.isEmpty()) {
+            item {
+                Text(
+                    text = "No articles available",
+                    fontSize = 14.sp,
+                    color = TextGray,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        } else {
+            items(articles) { article ->
+                ArticleItem(article = article)
+            }
         }
     }
 }
@@ -101,12 +118,11 @@ private fun TipsTopBar() {
             Text("Tips", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextBlack)
             Text("Daily tips and articles for a healthy life", fontSize = 14.sp, color = TextGray)
         }
-        Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.LightGray))
     }
 }
 
 @Composable
-private fun DailyRecommendsCard() {
+private fun DailyRecommendsCard(recommends: List<DailyRecommend>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -117,9 +133,22 @@ private fun DailyRecommendsCard() {
             Text("Daily Recommends", fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = TextBlack)
             Text("Quick ideas to improve daily nutrition", fontSize = 12.sp, color = TextGray)
             Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ChipInfo("Ganti soda dengan air putih", modifier = Modifier.weight(1f))
-                ChipInfo("1 buah sebelum makan", modifier = Modifier.weight(1f))
+
+            if (recommends.isEmpty()) {
+                Text(
+                    "Loading recommendations...",
+                    fontSize = 12.sp,
+                    color = TextGray,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(recommends.take(4)) { recommend ->
+                        ChipInfo(recommend.title, modifier = Modifier.width(160.dp))
+                    }
+                }
             }
         }
     }
@@ -147,7 +176,7 @@ private fun ChipInfo(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun NewTipItem(tip: Tip) {
+private fun TipItem(tip: Tip) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -171,17 +200,6 @@ private fun NewTipItem(tip: Tip) {
             Text(tip.description, fontSize = 12.sp, color = TextGray)
         }
     }
-}
-
-@Composable
-private fun HealthyLivingArticlesSection() {
-    Text(
-        text = "Healthy Living Articles",
-        fontSize = 18.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = TextBlack,
-        modifier = Modifier.padding(top = 8.dp)
-    )
 }
 
 @Composable
@@ -214,21 +232,5 @@ private fun ArticleItem(article: Article) {
                 Text(article.readTime, fontSize = 12.sp, color = TextGray)
             }
         }
-    }
-}
-
-private data class Article(
-    val id: Int,
-    val title: String,
-    val category: String,
-    val readTime: String,
-    val imageUrl: String
-)
-
-@Preview(showBackground = true)
-@Composable
-private fun TipsScreenPreview() {
-    NutriTrackTheme {
-        TipsScreen()
     }
 }

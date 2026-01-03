@@ -126,7 +126,12 @@ fun HomeScreen(
                         }
                     )
                 }
-                item { ProgressTrackerCard() }
+                item {
+                    ProgressTrackerCard(
+                        weeklyData = uiState.weeklyCalories,
+                        targetCalories = uiState.targetCalories
+                    )
+                }
                 item {
                     InsightAndTipsCard(
                         targetProtein = uiState.targetProtein.toFloat(),
@@ -471,24 +476,225 @@ private fun MealItemCard(
 }
 
 @Composable
-private fun ProgressTrackerCard() {
+private fun ProgressTrackerCard(
+    weeklyData: List<Pair<String, Int>>,
+    targetCalories: Int
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Progress Tracker's", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Weekly Progress", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextBlack)
+
+            // Average calories indicator
+            if (weeklyData.isNotEmpty()) {
+                val avgCalories = weeklyData.map { it.second }.filter { it > 0 }.average().toInt()
+                if (avgCalories > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.TrendingUp,
+                            contentDescription = "Average",
+                            tint = DarkGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            "Avg: $avgCalories kcal",
+                            fontSize = 12.sp,
+                            color = DarkGreen,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
+                .height(240.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .padding(16.dp)
             ) {
-                Text("Charts will be added later", color = Color.Gray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Daily Calories",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextBlack
+                    )
+
+                    // Target line indicator
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(16.dp)
+                                .height(2.dp)
+                                .background(DarkGreen.copy(alpha = 0.3f))
+                        )
+                        Text(
+                            "Target",
+                            fontSize = 11.sp,
+                            color = TextGray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (weeklyData.isEmpty() || weeklyData.all { it.second == 0 }) {
+                    // Empty state
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.BarChart,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = Color.LightGray
+                            )
+                            Text(
+                                "No data yet",
+                                fontSize = 14.sp,
+                                color = TextGray
+                            )
+                            Text(
+                                "Start logging meals to see your progress",
+                                fontSize = 12.sp,
+                                color = TextGray.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                } else {
+                    WeeklyBarChart(
+                        data = weeklyData,
+                        targetCalories = targetCalories
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyBarChart(
+    data: List<Pair<String, Int>>,
+    targetCalories: Int
+) {
+    val maxValue = (data.maxOfOrNull { it.second } ?: targetCalories).coerceAtLeast(targetCalories) * 1.1f
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Target line (background)
+        val targetLineHeight = if (maxValue > 0) {
+            ((targetCalories.toFloat() / maxValue) * 140).dp
+        } else 0.dp
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 0.dp)
+                .align(Alignment.BottomStart)
+                .offset(y = -24.dp - targetLineHeight)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(
+                        DarkGreen.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(1.dp)
+                    )
+            )
+        }
+
+        // Bars
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(164.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            data.forEach { (day, calories) ->
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    // Calories value
+                    if (calories > 0) {
+                        Text(
+                            text = if (calories >= 1000) {
+                                "${(calories / 100.0).toInt()}00"
+                            } else {
+                                "$calories"
+                            },
+                            fontSize = 10.sp,
+                            color = TextBlack,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
+                    // Bar
+                    val barHeight = if (maxValue > 0 && calories > 0) {
+                        ((calories.toFloat() / maxValue) * 140).coerceAtLeast(8f)
+                    } else if (calories == 0) {
+                        8f
+                    } else {
+                        8f
+                    }
+
+                    val barColor = when {
+                        calories == 0 -> Color.LightGray.copy(alpha = 0.3f)
+                        calories > targetCalories * 1.1 -> Color(0xFFE57373) // Light Red
+                        calories > targetCalories -> OrangeIndicator
+                        calories >= targetCalories * 0.8 -> DarkGreen
+                        else -> LightGreen
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp)
+                            .height(barHeight.dp)
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(barColor)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Day label
+                    Text(
+                        text = day,
+                        fontSize = 12.sp,
+                        color = if (calories > 0) TextBlack else TextGray.copy(alpha = 0.5f),
+                        fontWeight = if (calories > 0) FontWeight.Medium else FontWeight.Normal
+                    )
+                }
             }
         }
     }

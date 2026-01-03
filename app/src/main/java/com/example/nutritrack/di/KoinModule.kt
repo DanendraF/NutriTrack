@@ -75,7 +75,7 @@ val appModule = module {
     // Retrofit
     single {
         Retrofit.Builder()
-            .baseUrl("http://192.168.1.41:8080/")
+            .baseUrl("http://192.168.3.110:8080/")
             .client(get())
             .addConverterFactory(GsonConverterFactory.create(get()))
             .build()
@@ -101,13 +101,14 @@ val appModule = module {
     // ===== REPOSITORIES (Concrete implementations) =====
     single<UserRepository> { UserRepositoryImpl(get()) }
     single<FoodRepository> { FoodRepositoryImpl(get()) }
-    single<AuthRepository> { AuthRepositoryImpl(get()) }
+    single<AuthRepository> { AuthRepositoryImpl(get(), get()) }
     single { FirestoreUserRepository(get(), get()) }
     single { FirestoreMealRepository(get()) }
     single<UserSavedFoodRepository> { FirestoreUserSavedFoodRepository(get()) }
     single<com.example.nutritrack.data.repository.TipsRepository> {
         com.example.nutritrack.data.repository.TipsRepositoryImpl(get())
     }
+    single { TipsDataInitializer(get()) }
 
     // API Repositories
     single { ApiUserRepository(get()) }
@@ -118,10 +119,10 @@ val appModule = module {
     viewModel { AuthViewModel() }
     viewModel { FirebaseAuthViewModel(get(), get()) } // Added AuthPreferences
     viewModel { OnboardingViewModel(get(), get(), get()) }
-    viewModel { HomeViewModel(get(), get(), get()) } // Added ApiMealRepository
+    viewModel { HomeViewModel(get(), get(), get(), get()) } // Added ApiMealRepository + ApiUserRepository
     viewModel { FoodViewModel(get(), get()) } // Added ApiFoodRepository
     viewModel { UserSavedFoodViewModel(get(), get()) } // UserSavedFoodRepository + FirebaseAuth
     viewModel { MealViewModel(get()) }
     viewModel { ProfileViewModel(get(), get()) }
-    viewModel { com.example.nutritrack.presentation.tips.TipsViewModel(get()) }
+    viewModel { com.example.nutritrack.presentation.tips.TipsViewModel(get(), get()) }
 }

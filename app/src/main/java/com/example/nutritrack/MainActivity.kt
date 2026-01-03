@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -146,7 +147,7 @@ class MainActivity : ComponentActivity() {
 
                     // 3. Aplikasi Utama (Home Screen, dll.)
                     composable(GlobalRoutes.MAIN_APP) {
-                        MainAppLayout()
+                        MainAppLayout(appNavController = appNavController)
                     }
                 }
             }
@@ -155,7 +156,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainAppLayout() {
+fun MainAppLayout(appNavController: NavHostController) {
     val navController = rememberNavController()
     Scaffold(
         bottomBar = {
@@ -203,8 +204,8 @@ fun MainAppLayout() {
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onNavigateToLogin = {
-                        // Navigate back to login and clear backstack
-                        navController.navigate(GlobalRoutes.AUTH) {
+                        // Navigate back to login and clear backstack - use appNavController to exit MainAppLayout
+                        appNavController.navigate(GlobalRoutes.AUTH) {
                             popUpTo(0) { inclusive = true }
                         }
                     },
