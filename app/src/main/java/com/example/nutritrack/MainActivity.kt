@@ -59,14 +59,14 @@ object GlobalRoutes {
 // Item untuk navigasi bawah
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     data object Home : Screen("home", "Home", Icons.Default.Home)
-    data object History : Screen("history", "History", Icons.Default.RestaurantMenu)
+    data object Food : Screen("food", "Food", Icons.Default.Fastfood)
     data object Scan : Screen("scan", "Scan", Icons.Default.QrCodeScanner)
     data object Tips : Screen("tips", "Tips", Icons.Default.Lightbulb)
 
     data object Profile : Screen("profile", "Profile", Icons.Default.Person)
 }
 
-val bottomNavItems = listOf(Screen.Home, Screen.History, Screen.Scan, Screen.Tips, Screen.Profile)
+val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips, Screen.Profile)
 
 class MainActivity : ComponentActivity() {
 
@@ -201,7 +201,16 @@ fun MainAppLayout(appNavController: NavHostController) {
                     }
                 )
             }
-            composable(Screen.History.route) {
+            composable(Screen.Food.route) {
+                FoodScreen(
+                    onNavigateToFoodSearch = {
+                        navController.navigate("food_search_standalone")
+                    }
+                )
+            }
+
+            // History screen (accessible from elsewhere, not in bottom nav)
+            composable("history") {
                 com.example.nutritrack.presentation.history.HistoryScreen()
             }
             composable(Screen.Scan.route) { ScanScreen() }

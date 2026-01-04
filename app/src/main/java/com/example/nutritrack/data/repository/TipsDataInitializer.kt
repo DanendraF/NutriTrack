@@ -12,6 +12,13 @@ class TipsDataInitializer @Inject constructor(
 
     suspend fun initializeDataIfNeeded() {
         try {
+            // Check if tips collection is empty
+            val tipsSnapshot = firestore.collection("tips").limit(1).get().await()
+            if (tipsSnapshot.isEmpty) {
+                android.util.Log.d("TipsDataInitializer", "Initializing tips...")
+                initializeTips()
+            }
+
             // Check if daily_recommends collection is empty
             val recommendsSnapshot = firestore.collection("daily_recommends").limit(1).get().await()
             if (recommendsSnapshot.isEmpty) {
@@ -29,6 +36,73 @@ class TipsDataInitializer @Inject constructor(
             android.util.Log.d("TipsDataInitializer", "✅ Tips data initialization complete!")
         } catch (e: Exception) {
             android.util.Log.e("TipsDataInitializer", "Error initializing tips data", e)
+        }
+    }
+
+    private suspend fun initializeTips() {
+        val tips = listOf(
+            mapOf(
+                "id" to "tip_1",
+                "title" to "Minum Air Putih",
+                "description" to "Minum minimal 8 gelas air putih setiap hari untuk menjaga hidrasi tubuh",
+                "category" to "hydration",
+                "icon" to "💧"
+            ),
+            mapOf(
+                "id" to "tip_2",
+                "title" to "Olahraga Teratur",
+                "description" to "Lakukan olahraga minimal 30 menit setiap hari untuk kesehatan jantung",
+                "category" to "exercise",
+                "icon" to "🏃"
+            ),
+            mapOf(
+                "id" to "tip_3",
+                "title" to "Konsumsi Sayur & Buah",
+                "description" to "Makan 5 porsi sayur dan buah setiap hari untuk nutrisi seimbang",
+                "category" to "nutrition",
+                "icon" to "🥗"
+            ),
+            mapOf(
+                "id" to "tip_4",
+                "title" to "Tidur Cukup",
+                "description" to "Tidur 7-8 jam setiap malam untuk pemulihan tubuh optimal",
+                "category" to "sleep",
+                "icon" to "😴"
+            ),
+            mapOf(
+                "id" to "tip_5",
+                "title" to "Kurangi Gula",
+                "description" to "Batasi konsumsi gula tambahan maksimal 50 gram per hari",
+                "category" to "nutrition",
+                "icon" to "🍬"
+            ),
+            mapOf(
+                "id" to "tip_6",
+                "title" to "Sarapan Sehat",
+                "description" to "Jangan skip sarapan! Mulai hari dengan makanan bernutrisi",
+                "category" to "nutrition",
+                "icon" to "🍳"
+            ),
+            mapOf(
+                "id" to "tip_7",
+                "title" to "Protein Cukup",
+                "description" to "Konsumsi protein 0.8-1g per kg berat badan untuk massa otot",
+                "category" to "nutrition",
+                "icon" to "🥩"
+            ),
+            mapOf(
+                "id" to "tip_8",
+                "title" to "Kelola Stress",
+                "description" to "Lakukan meditasi atau yoga untuk mengurangi stress",
+                "category" to "mental_health",
+                "icon" to "🧘"
+            )
+        )
+
+        tips.forEach { tip ->
+            val id = tip["id"] as String
+            firestore.collection("tips").document(id).set(tip).await()
+            android.util.Log.d("TipsDataInitializer", "✓ Added tip: ${tip["title"]}")
         }
     }
 
