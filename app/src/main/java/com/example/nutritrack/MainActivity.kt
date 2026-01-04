@@ -44,6 +44,8 @@ import com.example.nutritrack.presentation.profile.ProfileScreen
 import com.example.nutritrack.presentation.settings.SettingsScreen
 import com.example.nutritrack.presentation.meal.AddMealScreen
 import com.example.nutritrack.presentation.food.FoodSearchScreen
+import com.example.nutritrack.presentation.article.ArticleDetailScreen
+import com.example.nutritrack.domain.model.Article
 import org.koin.android.ext.android.inject
 
 import com.example.nutritrack.ui.theme.NutriTrackTheme
@@ -71,6 +73,10 @@ val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips, 
 class MainActivity : ComponentActivity() {
 
     private val authPreferences: AuthPreferences by inject()
+
+    companion object {
+        var selectedArticle: Article? = null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -215,7 +221,28 @@ fun MainAppLayout(appNavController: NavHostController) {
                 com.example.nutritrack.presentation.history.HistoryScreen()
             }
             composable(Screen.Scan.route) { ScanScreen() }
-            composable(Screen.Tips.route) { TipsScreen() }
+            composable(Screen.Tips.route) {
+                TipsScreen(
+                    onNavigateToArticleDetail = { article ->
+                        MainActivity.selectedArticle = article
+                        navController.navigate("article_detail")
+                    }
+                )
+            }
+
+            // Article Detail Screen
+            composable("article_detail") {
+                MainActivity.selectedArticle?.let { article ->
+                    ArticleDetailScreen(
+                        article = article,
+                        onNavigateBack = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
+            }
+
+
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onNavigateToLogin = {

@@ -17,10 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.nutritrack.domain.model.Tip
 import com.example.nutritrack.domain.model.DailyRecommend
 import com.example.nutritrack.domain.model.Article
@@ -30,7 +32,8 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun TipsScreen(
-    viewModel: TipsViewModel = koinViewModel()
+    viewModel: TipsViewModel = koinViewModel(),
+    onNavigateToArticleDetail: (Article) -> Unit = {}
 ) {
     val tips by viewModel.tips.collectAsState()
     val dailyRecommends by viewModel.dailyRecommends.collectAsState()
@@ -105,7 +108,10 @@ fun TipsScreen(
             }
         } else {
             items(articles) { article ->
-                ArticleItem(article = article)
+                ArticleItem(
+                    article = article,
+                    onClick = { onNavigateToArticleDetail(article) }
+                )
             }
         }
     }
@@ -203,20 +209,26 @@ private fun TipItem(tip: Tip) {
 }
 
 @Composable
-private fun ArticleItem(article: Article) {
+private fun ArticleItem(
+    article: Article,
+    onClick: () -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = { /* TODO: Handle article click */ }
+        onClick = onClick
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
+            AsyncImage(
+                model = article.imageUrl,
+                contentDescription = article.title,
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.LightGray)
+                    .background(Color.LightGray),
+                contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -226,7 +238,8 @@ private fun ArticleItem(article: Article) {
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextBlack,
-                    lineHeight = 20.sp
+                    lineHeight = 20.sp,
+                    maxLines = 2
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(article.readTime, fontSize = 12.sp, color = TextGray)
