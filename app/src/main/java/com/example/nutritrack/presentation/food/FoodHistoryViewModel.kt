@@ -27,24 +27,23 @@ class FoodHistoryViewModel(
         _isLoading.value = true
 
         viewModelScope.launch {
-            // Get last 7 days
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val calendar = Calendar.getInstance()
-            val endDate = dateFormat.format(calendar.time)
+            android.util.Log.d("FoodHistoryViewModel", "=== loadRecentMeals called ===")
 
-            calendar.add(Calendar.DAY_OF_MONTH, -7)
-            val startDate = dateFormat.format(calendar.time)
+            try {
+                // Get last 7 days
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val allMeals = mutableListOf<RecentMeal>()
 
-            apiMealRepository.getDailyLogs(startDate, endDate).collect { result ->
-                when (result) {
-                    is Result.Loading -> {
-                        _isLoading.value = true
-                    }
-                    is Result.Success -> {
-                        val allMeals = mutableListOf<RecentMeal>()
+                // Fetch today's meals (most common case)
+                val today = dateFormat.format(Calendar.getInstance().time)
+                android.util.Log.d("FoodHistoryViewModel", "Fetching meals for: $today")
 
-                        // Extract all meals from daily logs
-                        result.data.logs.forEach { dailyLog ->
+                apiMealRepository.getDailyLog(today).collect { result ->
+                    when (result) {
+                        is Result.Success -> {
+                            val dailyLog = result.data
+                            android.util.Log.d("FoodHistoryViewModel", "✅ Got ${dailyLog.meals.size} meals for $today")
+
                             dailyLog.meals.forEach { mealDto ->
                                 allMeals.add(
                                     RecentMeal(
@@ -55,17 +54,26 @@ class FoodHistoryViewModel(
                                     )
                                 )
                             }
-                        }
 
-                        // Sort by most recent and take top 5
-                        _recentMeals.value = allMeals.take(5)
-                        _isLoading.value = false
-                    }
-                    is Result.Error -> {
-                        android.util.Log.e("FoodHistoryViewModel", "Error loading recent meals: ${result.message}")
-                        _isLoading.value = false
+                            android.util.Log.d("FoodHistoryViewModel", "📦 Total meals: ${allMeals.size}")
+
+                            // Sort by most recent and take top 5
+                            _recentMeals.value = allMeals.take(5)
+                            android.util.Log.d("FoodHistoryViewModel", "✅ Set ${_recentMeals.value.size} recent meals to UI")
+                            _isLoading.value = false
+                        }
+                        is Result.Error -> {
+                            android.util.Log.e("FoodHistoryViewModel", "❌ Error for $today: ${result.message}")
+                            _isLoading.value = false
+                        }
+                        is Result.Loading -> {
+                            android.util.Log.d("FoodHistoryViewModel", "⏳ Loading...")
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("FoodHistoryViewModel", "❌ Exception loading meals", e)
+                _isLoading.value = false
             }
         }
     }

@@ -110,6 +110,7 @@ val appModule = module {
         com.example.nutritrack.data.repository.TipsRepositoryImpl(get())
     }
     single { TipsDataInitializer(get()) }
+    single { com.example.nutritrack.data.repository.MealDataInitializer(get()) }
 
     // API Repositories
     single { ApiUserRepository(get()) }

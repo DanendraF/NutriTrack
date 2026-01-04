@@ -23,48 +23,61 @@ class TipsRepositoryImpl @Inject constructor(
 ) : TipsRepository {
 
     override fun getTips(): Flow<List<Tip>> = callbackFlow {
+        android.util.Log.d("TipsRepository", "🔍 Starting to listen for tips...")
+
         val listener = firestore.collection("tips")
-            .orderBy("order", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    android.util.Log.e("TipsRepository", "Error fetching tips", error)
+                    android.util.Log.e("TipsRepository", "❌ Error fetching tips", error)
                     close(error)
                     return@addSnapshotListener
                 }
 
+                android.util.Log.d("TipsRepository", "📡 Snapshot received: ${snapshot?.documents?.size} documents")
+
                 val tips = snapshot?.documents?.mapNotNull { doc ->
                     try {
-                        Tip(
+                        android.util.Log.d("TipsRepository", "  📄 Parsing tip: ${doc.id}")
+                        val tip = Tip(
                             id = doc.id,
                             title = doc.getString("title") ?: "",
                             description = doc.getString("description") ?: "",
                             category = doc.getString("category") ?: "",
                             icon = doc.getString("icon") ?: "",
-                            order = doc.getLong("order")?.toInt() ?: 0
+                            order = 0  // No order field in tips collection
                         )
+                        android.util.Log.d("TipsRepository", "    ✅ Parsed: ${tip.title}")
+                        tip
                     } catch (e: Exception) {
-                        android.util.Log.e("TipsRepository", "Error parsing tip: ${doc.id}", e)
+                        android.util.Log.e("TipsRepository", "    ❌ Error parsing tip: ${doc.id}", e)
                         null
                     }
                 } ?: emptyList()
 
-                android.util.Log.d("TipsRepository", "Fetched ${tips.size} tips")
+                android.util.Log.d("TipsRepository", "✅ Fetched ${tips.size} tips total")
                 trySend(tips)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            android.util.Log.d("TipsRepository", "🔌 Closing tips listener")
+            listener.remove()
+        }
     }
 
     override fun getDailyRecommends(): Flow<List<DailyRecommend>> = callbackFlow {
+        android.util.Log.d("TipsRepository", "🔍 Starting to listen for daily recommends...")
+
         val listener = firestore.collection("daily_recommends")
             .orderBy("order", Query.Direction.ASCENDING)
             .limit(6) // Get top 6 recommends
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    android.util.Log.e("TipsRepository", "Error fetching daily recommends", error)
+                    android.util.Log.e("TipsRepository", "❌ Error fetching daily recommends", error)
                     close(error)
                     return@addSnapshotListener
                 }
+
+                android.util.Log.d("TipsRepository", "📡 Snapshot received: ${snapshot?.documents?.size} daily recommends")
 
                 val recommends = snapshot?.documents?.mapNotNull { doc ->
                     try {
@@ -77,27 +90,34 @@ class TipsRepositoryImpl @Inject constructor(
                             order = doc.getLong("order")?.toInt() ?: 0
                         )
                     } catch (e: Exception) {
-                        android.util.Log.e("TipsRepository", "Error parsing recommend: ${doc.id}", e)
+                        android.util.Log.e("TipsRepository", "❌ Error parsing recommend: ${doc.id}", e)
                         null
                     }
                 } ?: emptyList()
 
-                android.util.Log.d("TipsRepository", "Fetched ${recommends.size} daily recommends")
+                android.util.Log.d("TipsRepository", "✅ Fetched ${recommends.size} daily recommends")
                 trySend(recommends)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            android.util.Log.d("TipsRepository", "🔌 Closing daily recommends listener")
+            listener.remove()
+        }
     }
 
     override fun getArticles(): Flow<List<Article>> = callbackFlow {
+        android.util.Log.d("TipsRepository", "🔍 Starting to listen for articles...")
+
         val listener = firestore.collection("articles")
             .orderBy("order", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    android.util.Log.e("TipsRepository", "Error fetching articles", error)
+                    android.util.Log.e("TipsRepository", "❌ Error fetching articles", error)
                     close(error)
                     return@addSnapshotListener
                 }
+
+                android.util.Log.d("TipsRepository", "📡 Snapshot received: ${snapshot?.documents?.size} articles")
 
                 val articles = snapshot?.documents?.mapNotNull { doc ->
                     try {
@@ -113,15 +133,18 @@ class TipsRepositoryImpl @Inject constructor(
                             order = doc.getLong("order")?.toInt() ?: 0
                         )
                     } catch (e: Exception) {
-                        android.util.Log.e("TipsRepository", "Error parsing article: ${doc.id}", e)
+                        android.util.Log.e("TipsRepository", "❌ Error parsing article: ${doc.id}", e)
                         null
                     }
                 } ?: emptyList()
 
-                android.util.Log.d("TipsRepository", "Fetched ${articles.size} articles")
+                android.util.Log.d("TipsRepository", "✅ Fetched ${articles.size} articles")
                 trySend(articles)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            android.util.Log.d("TipsRepository", "🔌 Closing articles listener")
+            listener.remove()
+        }
     }
 }

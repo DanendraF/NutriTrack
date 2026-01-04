@@ -65,7 +65,26 @@ fun FoodScreen(
         item {
             HistorySection(
                 recentMeals = recentMeals,
-                isLoading = historyLoading
+                isLoading = historyLoading,
+                onSaveFood = { meal: com.example.nutritrack.presentation.food.RecentMeal ->
+                    // Convert RecentMeal to UserSavedFood
+                    val savedFood = UserSavedFood(
+                        id = "",
+                        userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "",
+                        foodId = meal.id,
+                        foodName = meal.name,
+                        servingSize = "1 portion",
+                        calories = meal.calories,
+                        protein = 0f,
+                        carbs = 0f,
+                        fat = 0f,
+                        note = "",
+                        customPortion = 1.0f,
+                        lastUsedAt = System.currentTimeMillis(),
+                        useCount = 0
+                    )
+                    viewModel.saveFood(savedFood)
+                }
             )
         }
     }
@@ -81,20 +100,9 @@ fun FoodScreen(
 
 @Composable
 private fun FoodTopBar() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text("My Foods", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-            Text("Your saved and frequently eaten foods", fontSize = 14.sp, color = TextGray)
-        }
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(Color.LightGray)
-        )
+    Column {
+        Text("My Foods", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextBlack)
+        Text("Your saved and frequently eaten foods", fontSize = 14.sp, color = TextGray)
     }
 }
 
@@ -232,7 +240,8 @@ private fun SavedFoodItem(
 @Composable
 private fun HistorySection(
     recentMeals: List<com.example.nutritrack.presentation.food.RecentMeal>,
-    isLoading: Boolean
+    isLoading: Boolean,
+    onSaveFood: (com.example.nutritrack.presentation.food.RecentMeal) -> Unit = {}
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Recent Foods", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextBlack)
@@ -273,33 +282,58 @@ private fun HistorySection(
             }
         } else {
             recentMeals.forEach { meal ->
-                HistoryItem(meal)
+                HistoryItem(
+                    meal = meal,
+                    onSave = { onSaveFood(meal) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun HistoryItem(meal: com.example.nutritrack.presentation.food.RecentMeal) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(
+private fun HistoryItem(
+    meal: com.example.nutritrack.presentation.food.RecentMeal,
+    onSave: () -> Unit = {}
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground)
+    ) {
+        Row(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(DarkGreen.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Default.Restaurant,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = DarkGreen
-            )
-        }
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(meal.name, fontWeight = FontWeight.SemiBold, color = TextBlack)
-            Text("${meal.date} • ${meal.calories} kcal", fontSize = 12.sp, color = TextGray)
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DarkGreen.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Restaurant,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = DarkGreen
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(meal.name, fontWeight = FontWeight.SemiBold, color = TextBlack)
+                Text("${meal.date} • ${meal.calories} kcal", fontSize = 12.sp, color = TextGray)
+            }
+            Button(
+                onClick = onSave,
+                modifier = Modifier.height(36.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text("Save", fontSize = 12.sp)
+            }
         }
     }
 }

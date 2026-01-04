@@ -298,14 +298,14 @@ fun ScanResultSheet(
                                 modifier = Modifier.weight(1f),
                                 onClick = onDone
                             ) {
-                                Text("Cancel")
+                                Text("Retake")
                             }
                             Button(
                                 modifier = Modifier.weight(1f),
                                 onClick = onSave,
                                 colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
                             ) {
-                                Text("Save to Log", color = Color.White)
+                                Text("Done", color = Color.White)
                             }
                         }
                     } else {
