@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -58,14 +59,14 @@ object GlobalRoutes {
 // Item untuk navigasi bawah
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     data object Home : Screen("home", "Home", Icons.Default.Home)
-    data object Food : Screen("food", "Food", Icons.Default.Fastfood)
+    data object History : Screen("history", "History", Icons.Default.RestaurantMenu)
     data object Scan : Screen("scan", "Scan", Icons.Default.QrCodeScanner)
     data object Tips : Screen("tips", "Tips", Icons.Default.Lightbulb)
 
     data object Profile : Screen("profile", "Profile", Icons.Default.Person)
 }
 
-val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips, Screen.Profile)
+val bottomNavItems = listOf(Screen.Home, Screen.History, Screen.Scan, Screen.Tips, Screen.Profile)
 
 class MainActivity : ComponentActivity() {
 
@@ -134,15 +135,23 @@ class MainActivity : ComponentActivity() {
 
                     // 2. Alur Onboarding
                     composable(GlobalRoutes.ONBOARDING) {
-                        OnboardingNavHost(onOnboardingComplete = {
-                            // Mark onboarding as completed
-                            authPreferences.setOnboardingCompleted(true)
+                        OnboardingNavHost(
+                            onOnboardingComplete = {
+                                // Mark onboarding as completed
+                                authPreferences.setOnboardingCompleted(true)
 
-                            // Navigate to main app
-                            appNavController.navigate(GlobalRoutes.MAIN_APP) {
-                                popUpTo(GlobalRoutes.ONBOARDING) { inclusive = true }
+                                // Navigate to main app
+                                appNavController.navigate(GlobalRoutes.MAIN_APP) {
+                                    popUpTo(GlobalRoutes.ONBOARDING) { inclusive = true }
+                                }
+                            },
+                            onBackToLogin = {
+                                // Navigate back to login
+                                appNavController.navigate(GlobalRoutes.AUTH) {
+                                    popUpTo(GlobalRoutes.ONBOARDING) { inclusive = true }
+                                }
                             }
-                        })
+                        )
                     }
 
                     // 3. Aplikasi Utama (Home Screen, dll.)
@@ -192,12 +201,8 @@ fun MainAppLayout(appNavController: NavHostController) {
                     }
                 )
             }
-            composable(Screen.Food.route) {
-                FoodScreen(
-                    onNavigateToFoodSearch = {
-                        navController.navigate("food_search_standalone")
-                    }
-                )
+            composable(Screen.History.route) {
+                com.example.nutritrack.presentation.history.HistoryScreen()
             }
             composable(Screen.Scan.route) { ScanScreen() }
             composable(Screen.Tips.route) { TipsScreen() }
@@ -211,6 +216,15 @@ fun MainAppLayout(appNavController: NavHostController) {
                     },
                     onNavigateToSettings = {
                         navController.navigate("settings")
+                    }
+                )
+            }
+
+            // Food Screen (separate route for browsing saved foods)
+            composable("food") {
+                FoodScreen(
+                    onNavigateToFoodSearch = {
+                        navController.navigate("food_search_standalone")
                     }
                 )
             }
@@ -263,6 +277,18 @@ fun MainAppLayout(appNavController: NavHostController) {
                 SettingsScreen(
                     onNavigateBack = {
                         navController.popBackStack()
+                    },
+                    onNavigateToEditProfile = {
+                        navController.navigate("edit_profile")
+                    }
+                )
+            }
+
+            // Edit Profile Screen
+            composable("edit_profile") {
+                com.example.nutritrack.presentation.profile.EditProfileScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
                     }
                 )
             }
@@ -271,7 +297,7 @@ fun MainAppLayout(appNavController: NavHostController) {
             composable("food_search_standalone") {
                 val userSavedFoodViewModel: com.example.nutritrack.presentation.food.UserSavedFoodViewModel =
                     org.koin.androidx.compose.koinViewModel()
-                val firebaseAuth: com.google.firebase.auth.FirebaseAuth = org.koin.androidx.compose.get()
+                val firebaseAuth: com.google.firebase.auth.FirebaseAuth = org.koin.compose.koinInject()
 
                 FoodSearchScreen(
                     onFoodSelected = { food ->

@@ -66,6 +66,25 @@ class UserSavedFoodViewModel(
         }
     }
 
+    fun updateFood(userSavedFood: UserSavedFood) {
+        viewModelScope.launch {
+            val result = userSavedFoodRepository.updateFood(userSavedFood)
+            if (result.isFailure) {
+                _error.value = result.exceptionOrNull()?.message
+            }
+        }
+    }
+
+    fun markFoodAsUsed(foodId: String) {
+        val userId = firebaseAuth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val result = userSavedFoodRepository.updateLastUsed(foodId, userId)
+            if (result.isFailure) {
+                android.util.Log.e("UserSavedFoodVM", "Failed to update last used: ${result.exceptionOrNull()?.message}")
+            }
+        }
+    }
+
     fun deleteFood(foodId: String) {
         val userId = firebaseAuth.currentUser?.uid ?: return
         viewModelScope.launch {

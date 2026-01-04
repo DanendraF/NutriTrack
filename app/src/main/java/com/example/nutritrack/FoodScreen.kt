@@ -24,17 +24,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nutritrack.domain.model.UserSavedFood
 import com.example.nutritrack.presentation.food.UserSavedFoodViewModel
+import com.example.nutritrack.presentation.food.FoodHistoryViewModel
 import com.example.nutritrack.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun FoodScreen(
     onNavigateToFoodSearch: () -> Unit = {},
-    viewModel: UserSavedFoodViewModel = koinViewModel()
+    viewModel: UserSavedFoodViewModel = koinViewModel(),
+    foodHistoryViewModel: FoodHistoryViewModel = koinViewModel()
 ) {
     val savedFoods by viewModel.savedFoods.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+
+    val recentMeals by foodHistoryViewModel.recentMeals.collectAsState()
+    val historyLoading by foodHistoryViewModel.isLoading.collectAsState()
+
+    LaunchedEffect(Unit) {
+        foodHistoryViewModel.loadRecentMeals()
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -49,10 +58,16 @@ fun FoodScreen(
                 savedFoods = savedFoods,
                 isLoading = isLoading,
                 onDeleteFood = { foodId -> viewModel.deleteFood(foodId) },
+                onQuickAddFood = { foodId -> viewModel.markFoodAsUsed(foodId) },
                 onNavigateToFoodSearch = onNavigateToFoodSearch
             )
         }
-        item { HistorySection() }
+        item {
+            HistorySection(
+                recentMeals = recentMeals,
+                isLoading = historyLoading
+            )
+        }
     }
 
     // Show error snackbar if there's an error
@@ -88,6 +103,7 @@ private fun SavedFoodsSection(
     savedFoods: List<UserSavedFood>,
     isLoading: Boolean,
     onDeleteFood: (String) -> Unit,
+    onQuickAddFood: (String) -> Unit,
     onNavigateToFoodSearch: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -143,7 +159,8 @@ private fun SavedFoodsSection(
                 savedFoods.forEach { food ->
                     SavedFoodItem(
                         food = food,
-                        onDelete = { onDeleteFood(food.id) }
+                        onDelete = { onDeleteFood(food.id) },
+                        onQuickAdd = { onQuickAddFood(food.id) }
                     )
                 }
             }
@@ -154,7 +171,8 @@ private fun SavedFoodsSection(
 @Composable
 private fun SavedFoodItem(
     food: UserSavedFood,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onQuickAdd: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -204,7 +222,7 @@ private fun SavedFoodItem(
                     }
                 }
             }
-            IconButton(onClick = { /*TODO: Quick add*/ }) {
+            IconButton(onClick = onQuickAdd) {
                 Icon(Icons.Default.Add, contentDescription = "Add to meal", tint = DarkGreen)
             }
         }
@@ -212,33 +230,79 @@ private fun SavedFoodItem(
 }
 
 @Composable
-private fun HistorySection() {
-    val dummyHistory = remember { listOf(FoodHistory(1, "Avocado Toast", "2 days ago", 300), FoodHistory(2, "Pancake Stack", "5 days ago", 420)) }
+private fun HistorySection(
+    recentMeals: List<com.example.nutritrack.presentation.food.RecentMeal>,
+    isLoading: Boolean
+) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("History", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextBlack)
-        dummyHistory.forEach { food -> HistoryItem(food) }
+        Text("Recent Foods", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextBlack)
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    color = DarkGreen
+                )
+            }
+        } else if (recentMeals.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Restaurant,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = TextGray.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "No recent meals",
+                        fontSize = 14.sp,
+                        color = TextGray
+                    )
+                }
+            }
+        } else {
+            recentMeals.forEach { meal ->
+                HistoryItem(meal)
+            }
+        }
     }
 }
 
 @Composable
-private fun HistoryItem(food: FoodHistory) {
+private fun HistoryItem(meal: com.example.nutritrack.presentation.food.RecentMeal) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.LightGray))
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(DarkGreen.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Restaurant,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = DarkGreen
+            )
+        }
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(food.name, fontWeight = FontWeight.SemiBold, color = TextBlack)
-            Text("${food.date} • ${food.calories} kcal", fontSize = 12.sp, color = TextGray)
-        }
-        IconButton(onClick = { /*TODO*/ }) {
-            Icon(Icons.Outlined.Visibility, contentDescription = "View", tint = TextGray)
+            Text(meal.name, fontWeight = FontWeight.SemiBold, color = TextBlack)
+            Text("${meal.date} • ${meal.calories} kcal", fontSize = 12.sp, color = TextGray)
         }
     }
 }
-
-private data class FoodHistory(val id: Int, val name: String, val date: String, val calories: Int)
 
 @Preview(showBackground = true)
 @Composable

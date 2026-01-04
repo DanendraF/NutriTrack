@@ -89,6 +89,57 @@ class ApiFoodRepository(
         }
     }
 
+    fun createFood(request: com.example.nutritrack.data.remote.dto.CreateFoodRequest): Flow<Result<FoodResponse>> = flow {
+        try {
+            emit(Result.Loading)
+
+            val response = apiService.createFood(request)
+
+            if (response.isSuccessful && response.body() != null) {
+                emit(Result.Success(response.body()!!))
+            } else {
+                emit(Result.Error(response.message() ?: "Failed to create food"))
+            }
+        } catch (e: Exception) {
+            emit(Result.Error(e.message ?: "Network error"))
+        }
+    }
+
+    fun updateFood(
+        foodId: String,
+        request: com.example.nutritrack.data.remote.dto.CreateFoodRequest
+    ): Flow<Result<FoodResponse>> = flow {
+        try {
+            emit(Result.Loading)
+
+            val response = apiService.updateFood(foodId, request)
+
+            if (response.isSuccessful && response.body() != null) {
+                emit(Result.Success(response.body()!!))
+            } else {
+                emit(Result.Error(response.message() ?: "Failed to update food"))
+            }
+        } catch (e: Exception) {
+            emit(Result.Error(e.message ?: "Network error"))
+        }
+    }
+
+    fun deleteFood(foodId: String): Flow<Result<String>> = flow {
+        try {
+            emit(Result.Loading)
+
+            val response = apiService.deleteFood(foodId)
+
+            if (response.isSuccessful) {
+                emit(Result.Success("Food deleted successfully"))
+            } else {
+                emit(Result.Error(response.message() ?: "Failed to delete food"))
+            }
+        } catch (e: Exception) {
+            emit(Result.Error(e.message ?: "Network error"))
+        }
+    }
+
     fun healthCheck(): Flow<Result<String>> = flow {
         try {
             emit(Result.Loading)

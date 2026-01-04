@@ -20,7 +20,8 @@ import com.example.nutritrack.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToEditProfile: () -> Unit = {}
 ) {
     var notificationsEnabled by remember { mutableStateOf(true) }
     var darkModeEnabled by remember { mutableStateOf(false) }
@@ -108,7 +109,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Person,
                         title = "Edit Profile",
                         description = "Update your personal information",
-                        onClick = { /* TODO: Navigate to edit profile */ }
+                        onClick = onNavigateToEditProfile
                     )
 
                     Divider()

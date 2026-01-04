@@ -140,4 +140,26 @@ class ApiUserRepository(
             emit(Result.Error(e.message ?: "Network error"))
         }
     }
+
+    /**
+     * Helper function to update user profile with specific fields
+     */
+    fun updateUserProfile(
+        name: String,
+        age: Int,
+        height: Int,
+        weight: Double
+    ): Flow<Result<UserResponse>> {
+        // Calculate date of birth from age
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val birthYear = currentYear - age
+        val dateOfBirth = "$birthYear-01-01" // Simple calculation, using Jan 1st
+
+        return updateUser(
+            name = name,
+            dateOfBirth = dateOfBirth,
+            height = height.toDouble(),
+            weight = weight
+        )
+    }
 }

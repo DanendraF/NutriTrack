@@ -11,8 +11,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
@@ -49,7 +51,8 @@ private enum class ScanState { SCANNING, LOADING, RESULT }
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ScanScreen(
-    viewModel: FoodViewModel = koinViewModel()
+    viewModel: FoodViewModel = koinViewModel(),
+    mealViewModel: com.example.nutritrack.presentation.meal.MealViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
@@ -57,7 +60,8 @@ fun ScanScreen(
     var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var scanState by remember { mutableStateOf(ScanState.SCANNING) }
     var classificationResult by remember { mutableStateOf<NutriClassifier.Result?>(null) }
-    
+    var selectedMealType by remember { mutableStateOf<com.example.nutritrack.domain.model.MealType>(com.example.nutritrack.domain.model.MealType.SNACK) }
+
     val foodsState by viewModel.foodsState.collectAsState()
     val allFoods = (foodsState as? com.example.nutritrack.domain.model.UiState.Success<List<Food>>)?.data ?: emptyList()
 
@@ -111,7 +115,7 @@ fun ScanScreen(
     if (scanState == ScanState.RESULT && capturedBitmap != null) {
         val confidence = classificationResult?.confidence ?: 0
         val label = classificationResult?.label ?: "Unknown"
-        
+
         // Find food info if confidence > 45%
         val foodInfo = if (confidence > 45) {
             allFoods.find { it.name.equals(label, ignoreCase = true) || it.nameIndonesian?.equals(label, ignoreCase = true) == true }
@@ -122,6 +126,15 @@ fun ScanScreen(
             label = label,
             confidence = confidence,
             foodInfo = foodInfo,
+            selectedMealType = selectedMealType,
+            onMealTypeChange = { selectedMealType = it },
+            onSave = {
+                if (foodInfo != null) {
+                    mealViewModel.saveMealFromScan(foodInfo, selectedMealType)
+                }
+                capturedBitmap = null
+                scanState = ScanState.SCANNING
+            },
             onDone = {
                 capturedBitmap = null
                 scanState = ScanState.SCANNING
@@ -212,13 +225,16 @@ fun ScanResultSheet(
     label: String,
     confidence: Int,
     foodInfo: Food?,
+    selectedMealType: com.example.nutritrack.domain.model.MealType,
+    onMealTypeChange: (com.example.nutritrack.domain.model.MealType) -> Unit,
+    onSave: () -> Unit,
     onDone: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDone,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 32.dp).verticalScroll(rememberScrollState())) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
@@ -231,32 +247,80 @@ fun ScanResultSheet(
             Column(Modifier.padding(24.dp)) {
                 if (confidence <= 45) {
                     Text(
-                        "Objek tidak dikenali", 
-                        fontSize = 22.sp, 
+                        "Objek tidak dikenali",
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Red
                     )
                     Text("Pastikan pencahayaan cukup dan objek terlihat jelas.", color = Color.Gray)
+
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onDone,
+                        colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+                    ) {
+                        Text("Try Again", color = Color.White)
+                    }
                 } else {
                     Text("Detected Food", color = Color.Gray)
                     Text(foodInfo?.name ?: label, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text("Akurasi: $confidence%", fontSize = 14.sp, color = DarkGreen)
-                    
+
                     if (foodInfo != null) {
                         Spacer(Modifier.height(16.dp))
                         NutritionCard(foodInfo)
+
+                        Spacer(Modifier.height(24.dp))
+                        Text("Meal Type", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            com.example.nutritrack.domain.model.MealType.entries.forEach { mealType ->
+                                FilterChip(
+                                    selected = selectedMealType == mealType,
+                                    onClick = { onMealTypeChange(mealType) },
+                                    label = { Text(mealType.displayName) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = onDone
+                            ) {
+                                Text("Cancel")
+                            }
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                onClick = onSave,
+                                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+                            ) {
+                                Text("Save to Log", color = Color.White)
+                            }
+                        }
                     } else {
+                        Spacer(Modifier.height(16.dp))
                         Text("Data nutrisi tidak ditemukan untuk item ini.", color = Color.Gray)
+
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onDone,
+                            colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+                        ) {
+                            Text("Done", color = Color.White)
+                        }
                     }
-                }
-                
-                Spacer(Modifier.height(24.dp))
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onDone,
-                    colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
-                ) {
-                    Text("Done", color = Color.White)
                 }
             }
         }

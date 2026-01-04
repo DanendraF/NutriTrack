@@ -15,6 +15,7 @@ interface UserSavedFoodRepository {
     suspend fun saveFood(userSavedFood: UserSavedFood): Result<String>
     fun getUserSavedFoods(userId: String): Flow<List<UserSavedFood>>
     fun getFrequentlyUsedFoods(userId: String, limit: Int = 10): Flow<List<UserSavedFood>>
+    suspend fun updateFood(userSavedFood: UserSavedFood): Result<Unit>
     suspend fun updateLastUsed(foodId: String, userId: String): Result<Unit>
     suspend fun deleteFood(foodId: String, userId: String): Result<Unit>
     suspend fun getFoodById(foodId: String, userId: String): UserSavedFood?
@@ -93,6 +94,24 @@ class FirestoreUserSavedFoodRepository @Inject constructor(
             }
 
         awaitClose { listener.remove() }
+    }
+
+    override suspend fun updateFood(userSavedFood: UserSavedFood): Result<Unit> {
+        return try {
+            val docRef = collection.document(userSavedFood.id)
+            val existingFood = docRef.get().await().toObject(UserSavedFood::class.java)
+
+            if (existingFood?.userId == userSavedFood.userId) {
+                docRef.set(userSavedFood).await()
+                Log.d("UserSavedFoodRepo", "✅ Updated food: ${userSavedFood.foodName}")
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Food not found or unauthorized"))
+            }
+        } catch (e: Exception) {
+            Log.e("UserSavedFoodRepo", "❌ Error updating food", e)
+            Result.failure(e)
+        }
     }
 
     override suspend fun updateLastUsed(foodId: String, userId: String): Result<Unit> {

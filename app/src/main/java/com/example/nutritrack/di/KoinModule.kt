@@ -12,6 +12,7 @@ import com.example.nutritrack.presentation.auth.AuthViewModel
 import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.presentation.food.FoodViewModel
 import com.example.nutritrack.presentation.food.UserSavedFoodViewModel
+import com.example.nutritrack.presentation.history.HistoryViewModel
 import com.example.nutritrack.presentation.home.HomeViewModel
 import com.example.nutritrack.presentation.meal.MealViewModel
 import com.example.nutritrack.presentation.onboarding.viewmodel.OnboardingViewModel
@@ -122,7 +123,10 @@ val appModule = module {
     viewModel { HomeViewModel(get(), get(), get(), get()) } // Added ApiMealRepository + ApiUserRepository
     viewModel { FoodViewModel(get(), get()) } // Added ApiFoodRepository
     viewModel { UserSavedFoodViewModel(get(), get()) } // UserSavedFoodRepository + FirebaseAuth
+    viewModel { com.example.nutritrack.presentation.food.FoodHistoryViewModel(get()) }
     viewModel { MealViewModel(get()) }
     viewModel { ProfileViewModel(get(), get()) }
+    viewModel { com.example.nutritrack.presentation.profile.EditProfileViewModel(get(), get()) }
     viewModel { com.example.nutritrack.presentation.tips.TipsViewModel(get(), get()) }
+    viewModel { com.example.nutritrack.presentation.history.HistoryViewModel(get()) }
 }
