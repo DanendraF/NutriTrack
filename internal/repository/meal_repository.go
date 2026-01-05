@@ -228,8 +228,10 @@ func (r *MealRepository) GetDailyLog(ctx context.Context, userID string, date st
 
 // GetDailyLogs gets daily logs for a date range
 func (r *MealRepository) GetDailyLogs(ctx context.Context, userID string, startDate string, endDate string) ([]models.DailyLog, error) {
+	log.Printf("[GetDailyLogs] Querying daily logs for userID=%s, startDate=%s, endDate=%s", userID, startDate, endDate)
 	var dailyLogs []models.DailyLog
 
+	// Try query with OrderBy first
 	query := r.client.Collection("daily_logs").
 		Where("userId", "==", userID).
 		OrderBy("date", firestore.Desc)
@@ -248,17 +250,59 @@ func (r *MealRepository) GetDailyLogs(ctx context.Context, userID string, startD
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate daily logs: %w", err)
+			// If OrderBy fails (likely missing index), try fallback without OrderBy
+			log.Printf("[GetDailyLogs] Error with OrderBy query (likely missing index), using fallback: %v", err)
+			return r.getDailyLogsFallback(ctx, userID, startDate, endDate)
 		}
 
 		var dailyLog models.DailyLog
 		if err := doc.DataTo(&dailyLog); err != nil {
-			log.Printf("Error mapping daily log: %v", err)
+			log.Printf("[GetDailyLogs] Error mapping daily log: %v", err)
 			continue
 		}
 		dailyLogs = append(dailyLogs, dailyLog)
 	}
 
+	log.Printf("[GetDailyLogs] Found %d daily logs", len(dailyLogs))
+	return dailyLogs, nil
+}
+
+// getDailyLogsFallback gets daily logs without OrderBy (fallback when index is missing)
+func (r *MealRepository) getDailyLogsFallback(ctx context.Context, userID string, startDate string, endDate string) ([]models.DailyLog, error) {
+	log.Printf("[getDailyLogsFallback] Using fallback query without OrderBy")
+	var dailyLogs []models.DailyLog
+
+	// Simple query without OrderBy
+	query := r.client.Collection("daily_logs").
+		Where("userId", "==", userID)
+
+	if startDate != "" {
+		query = query.Where("date", ">=", startDate)
+	}
+	if endDate != "" {
+		query = query.Where("date", "<=", endDate)
+	}
+
+	iter := query.Documents(ctx)
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Printf("[getDailyLogsFallback] Error in fallback query: %v", err)
+			return nil, fmt.Errorf("failed to iterate daily logs: %w", err)
+		}
+
+		var dailyLog models.DailyLog
+		if err := doc.DataTo(&dailyLog); err != nil {
+			log.Printf("[getDailyLogsFallback] Error mapping daily log: %v", err)
+			continue
+		}
+		dailyLogs = append(dailyLogs, dailyLog)
+	}
+
+	log.Printf("[getDailyLogsFallback] Found %d daily logs (fallback)", len(dailyLogs))
 	return dailyLogs, nil
 }
 
