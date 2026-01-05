@@ -86,6 +86,9 @@ fun ScanScreen(
     val firebaseAuth: FirebaseAuth = get()
     var lastCapturedBase64 by remember { mutableStateOf<String?>(null) }
 
+    // Monitor save meal state
+    val saveMealState by mealViewModel.saveMealState.collectAsState()
+
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) {}
@@ -93,6 +96,30 @@ fun ScanScreen(
     LaunchedEffect(Unit) {
         if (!cameraPermission.status.isGranted) {
             launcher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Handle save meal result
+    LaunchedEffect(saveMealState) {
+        when (saveMealState) {
+            is com.example.nutritrack.domain.model.UiState.Success -> {
+                Toast.makeText(context, "✅ Meal saved successfully!", Toast.LENGTH_SHORT).show()
+                android.util.Log.d("ScanScreen", "Meal saved to Firebase: ${(saveMealState as com.example.nutritrack.domain.model.UiState.Success).data}")
+                mealViewModel.resetSaveState()
+
+                // Reset scan after successful save
+                lastCapturedBase64 = null
+                fetchedFoodInfo = null
+                capturedBitmap = null
+                scanState = ScanState.SCANNING
+            }
+            is com.example.nutritrack.domain.model.UiState.Error -> {
+                val errorMsg = (saveMealState as com.example.nutritrack.domain.model.UiState.Error).message
+                Toast.makeText(context, "❌ Failed to save meal: $errorMsg", Toast.LENGTH_LONG).show()
+                android.util.Log.e("ScanScreen", "Failed to save meal: $errorMsg")
+                mealViewModel.resetSaveState()
+            }
+            else -> {}
         }
     }
 
@@ -246,26 +273,29 @@ fun ScanScreen(
 
                         try {
                             newDocRef.set(data).await()
-                            android.util.Log.d("ScanScreen", "Saved scan log: ${newDocRef.id} under log_scan/$userId/scans")
-                            Toast.makeText(context, "Scan saved", Toast.LENGTH_SHORT).show()
+                            android.util.Log.d("ScanScreen", "✅ Scan log saved: ${newDocRef.id} under log_scan/$userId/scans")
                         } catch (e: Exception) {
-                            android.util.Log.e("ScanScreen", "Failed to save scan log", e)
-                            Toast.makeText(context, "Failed to save scan", Toast.LENGTH_SHORT).show()
+                            android.util.Log.e("ScanScreen", "❌ Failed to save scan log", e)
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("ScanScreen", "Exception saving scan log", e)
+                        android.util.Log.e("ScanScreen", "❌ Exception saving scan log", e)
                     }
                 }
 
+                // Save meal to backend (will trigger LaunchedEffect for UI feedback)
                 if (foodInfo != null) {
+                    android.util.Log.d("ScanScreen", "🍽️ Saving meal to backend: ${foodInfo.name}")
                     mealViewModel.saveMealFromScan(foodInfo, selectedMealType)
-                }
+                } else {
+                    android.util.Log.e("ScanScreen", "❌ No food info to save")
+                    Toast.makeText(context, "No food information to save", Toast.LENGTH_SHORT).show()
 
-                // reset states
-                lastCapturedBase64 = null
-                fetchedFoodInfo = null
-                capturedBitmap = null
-                scanState = ScanState.SCANNING
+                    // Reset manually if no food to save
+                    lastCapturedBase64 = null
+                    fetchedFoodInfo = null
+                    capturedBitmap = null
+                    scanState = ScanState.SCANNING
+                }
             },
             onDone = {
                 capturedBitmap = null
