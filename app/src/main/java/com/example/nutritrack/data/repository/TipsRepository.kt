@@ -121,6 +121,15 @@ class TipsRepositoryImpl @Inject constructor(
 
                 val articles = snapshot?.documents?.mapNotNull { doc ->
                     try {
+                        // Handle publishedAt as either String or Timestamp
+                        val publishedAt = try {
+                            doc.getString("publishedAt")
+                        } catch (e: Exception) {
+                            // If it's a Timestamp, convert to string
+                            val timestamp = doc.getTimestamp("publishedAt")
+                            timestamp?.toDate()?.toString() ?: ""
+                        } ?: ""
+
                         Article(
                             id = doc.id,
                             title = doc.getString("title") ?: "",
@@ -129,7 +138,7 @@ class TipsRepositoryImpl @Inject constructor(
                             imageUrl = doc.getString("imageUrl") ?: "",
                             content = doc.getString("content") ?: "",
                             author = doc.getString("author") ?: "",
-                            publishedAt = doc.getString("publishedAt") ?: "",
+                            publishedAt = publishedAt,
                             order = doc.getLong("order")?.toInt() ?: 0
                         )
                     } catch (e: Exception) {

@@ -213,22 +213,6 @@ private fun LatestTipsSection(tips: List<Tip>) {
                 LatestTipCard(tip)
             }
         }
-
-        // "Lihat Selengkapnya" Button
-        Button(
-            onClick = { /* TODO: Navigate to all tips */ },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
-        ) {
-            Text(
-                "Lihat Selengkapnya",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
     }
 }
 
@@ -265,19 +249,6 @@ private fun LatestTipCard(tip: Tip) {
                     tip.description,
                     fontSize = 12.sp,
                     color = TextGray
-                )
-            }
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = DarkGreen,
-                modifier = Modifier.wrapContentWidth()
-            ) {
-                Text(
-                    "Baca",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                 )
             }
         }
@@ -406,55 +377,22 @@ private fun ArticleItem(
                     maxLines = 2
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Please add you content here. keep it short and simple. And smile :)",
-                    fontSize = 12.sp,
-                    color = TextGray,
-                    maxLines = 2
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Tags
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = LightGreen.copy(alpha = 0.7f),
-                        modifier = Modifier.wrapContentWidth()
-                    ) {
-                        Text(
-                            "Low Fats",
-                            fontSize = 10.sp,
-                            color = DarkGreen,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = Color(0xFFE3F2FD),
-                        modifier = Modifier.wrapContentWidth()
-                    ) {
-                        Text(
-                            "Tricks Body",
-                            fontSize = 10.sp,
-                            color = Color(0xFF1976D2),
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = Color(0xFFFFF3E0),
-                        modifier = Modifier.wrapContentWidth()
-                    ) {
-                        Text(
-                            "Whole Veg",
-                            fontSize = 10.sp,
-                            color = Color(0xFFFF6F00),
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        article.readTime,
+                        fontSize = 12.sp,
+                        color = TextGray
+                    )
+                    Text(
+                        article.category,
+                        fontSize = 12.sp,
+                        color = DarkGreen,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }

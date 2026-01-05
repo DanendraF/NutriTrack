@@ -263,42 +263,80 @@ private fun FoodHistoryItem(
 
 @Composable
 private fun CategorySection(
-    onCategoryClick: (String) -> Unit
+    onCategoryClick: (String) -> Unit,
+    recentMeals: List<com.example.nutritrack.presentation.food.RecentMeal>
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Category",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextBlack
-            )
-            TextButton(onClick = { /* TODO */ }) {
-                Text(
-                    "See All",
-                    fontSize = 14.sp,
-                    color = DarkGreen,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        // Food categories
-        val categories = listOf(
-            FoodCategory("sarapan", "Sarapan", Color(0xFFFFA726)),
-            FoodCategory("makan_siang", "Makan Siang", Color(0xFF66BB6A)),
-            FoodCategory("camilan", "Camilan", Color(0xFF42A5F5))
+        Text(
+            "Meals by Type",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextBlack
         )
 
-        categories.forEach { category ->
-            CategoryBadge(
-                category = category,
-                onClick = { onCategoryClick(category.id) }
+        // Group meals by type
+        val breakfastMeals = recentMeals.filter { it.mealType?.lowercase() == "breakfast" }.take(3)
+        val lunchMeals = recentMeals.filter { it.mealType?.lowercase() == "lunch" }.take(3)
+        val snackMeals = recentMeals.filter { it.mealType?.lowercase() == "snack" }.take(3)
+        val dinnerMeals = recentMeals.filter { it.mealType?.lowercase() == "dinner" }.take(3)
+
+        // Show categories only if there are meals
+        if (breakfastMeals.isNotEmpty()) {
+            MealTypeSection(
+                title = "Breakfast",
+                meals = breakfastMeals,
+                color = Color(0xFFFFA726)
             )
+        }
+
+        if (lunchMeals.isNotEmpty()) {
+            MealTypeSection(
+                title = "Lunch",
+                meals = lunchMeals,
+                color = Color(0xFF66BB6A)
+            )
+        }
+
+        if (snackMeals.isNotEmpty()) {
+            MealTypeSection(
+                title = "Snack",
+                meals = snackMeals,
+                color = Color(0xFF42A5F5)
+            )
+        }
+
+        if (dinnerMeals.isNotEmpty()) {
+            MealTypeSection(
+                title = "Dinner",
+                meals = dinnerMeals,
+                color = Color(0xFFEF5350)
+            )
+        }
+
+        // Empty state
+        if (recentMeals.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackground)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Fastfood,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = TextGray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("No meals categorized yet", fontSize = 14.sp, color = TextGray)
+                    Text("Start logging your meals!", fontSize = 12.sp, color = TextGray)
+                }
+            }
         }
     }
 }

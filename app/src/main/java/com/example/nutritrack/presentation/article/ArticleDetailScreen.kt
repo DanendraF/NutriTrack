@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -148,12 +149,13 @@ fun ArticleDetailScreen(
                                 FormattedText(paragraph)
                             }
                             else -> {
-                                // Normal paragraph
+                                // Normal paragraph with justify alignment
                                 Text(
                                     text = paragraph,
                                     fontSize = 16.sp,
                                     color = TextBlack.copy(alpha = 0.8f),
                                     lineHeight = 24.sp,
+                                    textAlign = TextAlign.Justify,
                                     modifier = Modifier.padding(bottom = 8.dp)
                                 )
                             }
@@ -185,6 +187,7 @@ private fun FormattedText(text: String) {
         fontSize = 16.sp,
         color = TextBlack.copy(alpha = 0.8f),
         lineHeight = 24.sp,
+        textAlign = TextAlign.Justify,
         modifier = Modifier.padding(bottom = 8.dp)
     )
 }

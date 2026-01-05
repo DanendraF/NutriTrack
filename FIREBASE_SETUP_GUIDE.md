@@ -183,6 +183,24 @@ service cloud.firestore {
       allow write: if false; // Only admins can write (implement admin check later)
     }
 
+    // Tips collection - read-only for all users
+    match /tips/{tipId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Daily recommends collection - read-only for all users
+    match /daily_recommends/{recommendId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Articles collection - read-only for all users
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
     // Scanned images collection
     match /scanned_images/{userId}/images/{imageId} {
       allow read, write: if isOwner(userId);

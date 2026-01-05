@@ -4,21 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.RestaurantMenu
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -175,50 +168,10 @@ fun MainAppLayout(appNavController: NavHostController) {
     val navController = rememberNavController()
     var selectedArticle by remember { mutableStateOf<Article?>(null) }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                bottomNavItems.forEach { screen ->
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                screen.icon,
-                                contentDescription = screen.label,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        },
-                        label = {
-                            Text(
-                                screen.label,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = DarkGreen,
-                            selectedTextColor = DarkGreen,
-                            indicatorColor = LightGreen.copy(alpha = 0.2f),
-                            unselectedIconColor = Color(0xFF9E9E9E),
-                            unselectedTextColor = Color(0xFF9E9E9E)
-                        )
-                    )
-                }
-            }
-        }
-    ) { innerPadding ->
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            bottomBar = { }
+        ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
@@ -442,5 +395,151 @@ fun MainAppLayout(appNavController: NavHostController) {
                 )
             }
         }
+    }
+
+        // Floating Bottom Navigation Bar
+        FloatingBottomNav(
+            navController = navController,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+}
+
+@Composable
+fun FloatingBottomNav(
+    navController: NavHostController,
+    modifier: Modifier = Modifier
+) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth(0.9f)
+            .padding(bottom = 16.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Home
+            BottomNavItem(
+                icon = Icons.Default.Home,
+                label = "Home",
+                selected = currentDestination?.route == Screen.Home.route,
+                onClick = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+
+            // Food
+            BottomNavItem(
+                icon = Icons.Default.Search,
+                label = "Food",
+                selected = currentDestination?.route == Screen.Food.route,
+                onClick = {
+                    navController.navigate(Screen.Food.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+
+            // Scan (FAB in center)
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .offset(y = (-12).dp),
+                contentAlignment = Alignment.Center
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        navController.navigate(Screen.Scan.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    containerColor = DarkGreen,
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Scan",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            // Tips
+            BottomNavItem(
+                icon = Icons.Default.Star,
+                label = "Tips",
+                selected = currentDestination?.route == Screen.Tips.route,
+                onClick = {
+                    navController.navigate(Screen.Tips.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+
+            // Profile
+            BottomNavItem(
+                icon = Icons.Default.Person,
+                label = "Profile",
+                selected = currentDestination?.route == Screen.Profile.route,
+                onClick = {
+                    navController.navigate(Screen.Profile.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun BottomNavItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (selected) DarkGreen else Color(0xFF9E9E9E),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            color = if (selected) DarkGreen else Color(0xFF9E9E9E),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
