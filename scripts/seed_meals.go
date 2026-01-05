@@ -12,7 +12,7 @@ import (
 
 const (
 	userID             = "IBF45l65PTXktmB7a2u58DPu1673"
-	serviceAccountPath = "./serviceAccountKey.json"
+	serviceAccountPath = "../serviceAccountKey.json"
 	projectID          = "nutritrack-uiifrl25"
 )
 
@@ -31,6 +31,17 @@ type Meal struct {
 	Timestamp   time.Time `firestore:"timestamp"`
 }
 
+type DailyLog struct {
+	ID            string    `firestore:"id"`
+	UserID        string    `firestore:"userId"`
+	Date          string    `firestore:"date"`
+	TotalCalories float64   `firestore:"totalCalories"`
+	TotalProtein  float64   `firestore:"totalProtein"`
+	TotalCarbs    float64   `firestore:"totalCarbs"`
+	TotalFat      float64   `firestore:"totalFat"`
+	UpdatedAt     time.Time `firestore:"updatedAt"`
+}
+
 func main() {
 	ctx := context.Background()
 
@@ -42,23 +53,14 @@ func main() {
 	defer client.Close()
 
 	fmt.Printf("🍽️ Seeding meal data for user: %s\n", userID)
-
-	// Check if user already has meals
-	existingMeals, err := client.Collection("meals").Where("userId", "==", userID).Limit(1).Documents(ctx).GetAll()
-	if err != nil {
-		log.Fatalf("Failed to check existing meals: %v", err)
-	}
-
-	if len(existingMeals) > 0 {
-		fmt.Println("⏭️ User already has meals, skipping initialization")
-		return
-	}
-
-	fmt.Println("✨ No meals found, initializing sample data...")
+	fmt.Println("✨ Adding sample meal data for 7 days...")
 
 	// Seed meals for last 7 days
 	now := time.Now()
 	layout := "2006-01-02"
+
+	// Track dates that need daily_logs update
+	datesWithMeals := make(map[string]bool)
 
 	for daysAgo := 0; daysAgo <= 6; daysAgo++ {
 		date := now.AddDate(0, 0, -daysAgo)
@@ -88,9 +90,23 @@ func main() {
 				fmt.Printf("  ✅ Added: %s (%d kcal)\n", meal.FoodName, meal.Calories)
 			}
 		}
+
+		datesWithMeals[dateStr] = true
 	}
 
-	fmt.Println("✅ Successfully seeded meals for 7 days!")
+	fmt.Println("\n📊 Updating daily logs...")
+
+	// Update daily_logs for each date
+	for dateStr := range datesWithMeals {
+		err := updateDailyLog(ctx, client, userID, dateStr)
+		if err != nil {
+			log.Printf("  ❌ Failed to update daily log for %s: %v", dateStr, err)
+		} else {
+			fmt.Printf("  ✅ Updated daily log for: %s\n", dateStr)
+		}
+	}
+
+	fmt.Println("✅ Successfully seeded meals and daily logs for 7 days!")
 }
 
 func getMealsDay1(date string, timestamp time.Time) []Meal {
@@ -218,4 +234,52 @@ func getMealsDay3(date string, timestamp time.Time) []Meal {
 			Timestamp:   timestamp,
 		},
 	}
+}
+
+// updateDailyLog recalculates and updates the daily log for a specific date
+func updateDailyLog(ctx context.Context, client *firestore.Client, userID string, date string) error {
+	// Get all meals for this date
+	iter := client.Collection("meals").
+		Where("userId", "==", userID).
+		Where("date", "==", date).
+		Documents(ctx)
+
+	var totalCalories float64
+	var totalProtein float64
+	var totalCarbs float64
+	var totalFat float64
+
+	for {
+		doc, err := iter.Next()
+		if err != nil {
+			break
+		}
+
+		var meal Meal
+		if err := doc.DataTo(&meal); err != nil {
+			continue
+		}
+
+		totalCalories += float64(meal.Calories) * meal.Quantity
+		totalProtein += float64(meal.Protein) * meal.Quantity
+		totalCarbs += float64(meal.Carbs) * meal.Quantity
+		totalFat += float64(meal.Fat) * meal.Quantity
+	}
+
+	// Create daily log
+	dailyLogID := fmt.Sprintf("%s_%s", userID, date)
+	dailyLog := DailyLog{
+		ID:            dailyLogID,
+		UserID:        userID,
+		Date:          date,
+		TotalCalories: totalCalories,
+		TotalProtein:  totalProtein,
+		TotalCarbs:    totalCarbs,
+		TotalFat:      totalFat,
+		UpdatedAt:     time.Now(),
+	}
+
+	// Save to Firestore
+	_, err := client.Collection("daily_logs").Doc(dailyLogID).Set(ctx, dailyLog)
+	return err
 }
