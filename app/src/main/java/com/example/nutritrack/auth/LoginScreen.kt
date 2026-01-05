@@ -29,9 +29,6 @@ import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.ui.theme.DarkGreen
 import com.example.nutritrack.ui.theme.NutriTrackTheme
 import com.example.nutritrack.ui.theme.TextGray
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(
@@ -44,26 +41,10 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Inject MealDataInitializer
-    val mealDataInitializer: com.example.nutritrack.data.repository.MealDataInitializer = koinInject()
-    val firebaseAuth: FirebaseAuth = koinInject()
-
     LaunchedEffect(loginState) {
         when (loginState) {
             is UiState.Success -> {
                 android.util.Log.d("LoginScreen", "✅ Login successful!")
-
-                // Initialize meal data for the logged-in user
-                val userId = firebaseAuth.currentUser?.uid
-                if (userId != null) {
-                    android.util.Log.d("LoginScreen", "🍽️ Initializing meal data for user: $userId")
-                    launch(Dispatchers.IO) {
-                        mealDataInitializer.initializeMealsForUser(userId)
-                    }
-                } else {
-                    android.util.Log.w("LoginScreen", "⚠️ User ID is null, skipping meal initialization")
-                }
-
                 viewModel.resetLoginState()
                 onLoginSuccess()
             }

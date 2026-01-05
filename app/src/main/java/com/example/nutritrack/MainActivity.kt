@@ -19,7 +19,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -73,10 +75,6 @@ val bottomNavItems = listOf(Screen.Home, Screen.Food, Screen.Scan, Screen.Tips, 
 class MainActivity : ComponentActivity() {
 
     private val authPreferences: AuthPreferences by inject()
-
-    companion object {
-        var selectedArticle: Article? = null
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -174,6 +172,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainAppLayout(appNavController: NavHostController) {
     val navController = rememberNavController()
+    var selectedArticle by remember { mutableStateOf<Article?>(null) }
+
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -224,7 +224,7 @@ fun MainAppLayout(appNavController: NavHostController) {
             composable(Screen.Tips.route) {
                 TipsScreen(
                     onNavigateToArticleDetail = { article ->
-                        MainActivity.selectedArticle = article
+                        selectedArticle = article
                         navController.navigate("article_detail")
                     }
                 )
@@ -232,7 +232,7 @@ fun MainAppLayout(appNavController: NavHostController) {
 
             // Article Detail Screen
             composable("article_detail") {
-                MainActivity.selectedArticle?.let { article ->
+                selectedArticle?.let { article ->
                     ArticleDetailScreen(
                         article = article,
                         onNavigateBack = {
