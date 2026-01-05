@@ -5,6 +5,7 @@ import com.example.nutritrack.BuildConfig
 import com.example.nutritrack.data.local.NutriTrackDatabase
 import com.example.nutritrack.data.remote.api.NutriTrackApiService
 import com.example.nutritrack.data.remote.interceptor.AuthInterceptor
+import com.example.nutritrack.data.remote.openai.OpenAIService
 import com.example.nutritrack.data.repository.*
 import com.example.nutritrack.data.repository.ApiUserRepository
 import com.example.nutritrack.data.repository.ApiFoodRepository
@@ -117,10 +118,13 @@ val appModule = module {
     single { ApiFoodRepository(get()) }
     single { ApiMealRepository(get()) }
 
+    // OpenAI Service
+    single { OpenAIService() }
+
     // ===== VIEWMODELS =====
     viewModel { AuthViewModel() }
     viewModel { FirebaseAuthViewModel(get(), get()) } // Added AuthPreferences
-    viewModel { OnboardingViewModel(get(), get(), get()) }
+    viewModel { OnboardingViewModel(get(), get(), get(), get()) } // UserRepository, ApiUserRepository, FirebaseAuth, OpenAIService
     viewModel { HomeViewModel(get(), get(), get(), get()) } // UserRepository + ApiMealRepository + ApiUserRepository + AuthPreferences (removed FirestoreMealRepository)
     viewModel { FoodViewModel(get(), get()) } // Added ApiFoodRepository
     viewModel { UserSavedFoodViewModel(get(), get()) } // UserSavedFoodRepository + FirebaseAuth
