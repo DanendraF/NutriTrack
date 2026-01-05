@@ -40,7 +40,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, userID string, req *mod
 		Goals: models.Goals{
 			ActivityLevel:  "moderate",  // default
 			NutritionGoal:  "maintain",  // default
-			TargetCalories: 2000,        // default, will be calculated
+			TargetCalories: 2000,        // will be calculated below
 			TargetProtein:  0,
 			TargetCarbs:    0,
 			TargetFat:      0,
@@ -56,6 +56,23 @@ func (r *UserRepository) CreateUser(ctx context.Context, userID string, req *mod
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
+
+	// Calculate nutrition goals based on user profile
+	println("📥 Creating user:", req.Name)
+	println("📊 Input data: gender=", req.Gender, "age=", calculateAge(req.DateOfBirth), "height=", req.Height, "weight=", req.Weight)
+
+	calculatedGoals := calculateNutritionGoals(user)
+	user.Goals.BMR = calculatedGoals.BMR
+	user.Goals.TDEE = calculatedGoals.TDEE
+	user.Goals.TargetCalories = calculatedGoals.TargetCalories
+	user.Goals.TargetProtein = calculatedGoals.TargetProtein
+	user.Goals.TargetCarbs = calculatedGoals.TargetCarbs
+	user.Goals.TargetFat = calculatedGoals.TargetFat
+
+	println("✅ BMR calculated:", calculatedGoals.BMR)
+	println("✅ TDEE calculated:", calculatedGoals.TDEE)
+	println("✅ Target Calories:", calculatedGoals.TargetCalories)
+	println("✅ Macros - Protein:", calculatedGoals.TargetProtein, "g, Carbs:", calculatedGoals.TargetCarbs, "g, Fat:", calculatedGoals.TargetFat, "g")
 
 	// Save to Firestore
 	_, err := r.client.Collection("users").Doc(userID).Set(ctx, user)
@@ -201,8 +218,10 @@ func calculateNutritionGoals(user *models.User) *models.Goals {
 	var bmr float64
 	if user.Gender == "male" {
 		bmr = 88.362 + (13.397 * user.Measurements.Weight) + (4.799 * user.Measurements.Height) - (5.677 * float64(age))
+		println("🔢 BMR Calculation (Male): 88.362 + (13.397 ×", user.Measurements.Weight, ") + (4.799 ×", user.Measurements.Height, ") - (5.677 ×", age, ") =", bmr)
 	} else {
 		bmr = 447.593 + (9.247 * user.Measurements.Weight) + (3.098 * user.Measurements.Height) - (4.330 * float64(age))
+		println("🔢 BMR Calculation (Female): 447.593 + (9.247 ×", user.Measurements.Weight, ") + (3.098 ×", user.Measurements.Height, ") - (4.330 ×", age, ") =", bmr)
 	}
 
 	// Activity multipliers
@@ -221,22 +240,28 @@ func calculateNutritionGoals(user *models.User) *models.Goals {
 
 	// Calculate TDEE
 	tdee := bmr * multiplier
+	println("🔢 TDEE Calculation: BMR(", bmr, ") × Activity Level(", user.Goals.ActivityLevel, "=", multiplier, ") =", tdee)
 
 	// Adjust for nutrition goal
 	var targetCalories int
 	switch user.Goals.NutritionGoal {
 	case "lose":
 		targetCalories = int(tdee * 0.85) // 15% deficit
+		println("🎯 Goal: Lose Weight - TDEE(", tdee, ") × 0.85 =", targetCalories, "kcal")
 	case "gain":
 		targetCalories = int(tdee * 1.15) // 15% surplus
+		println("🎯 Goal: Gain Weight - TDEE(", tdee, ") × 1.15 =", targetCalories, "kcal")
 	default: // maintain
 		targetCalories = int(tdee)
+		println("🎯 Goal: Maintain Weight - TDEE =", targetCalories, "kcal")
 	}
 
 	// Calculate macros (40% carbs, 30% protein, 30% fat)
 	targetProtein := float64(targetCalories) * 0.30 / 4    // 4 cal/g
 	targetCarbs := float64(targetCalories) * 0.40 / 4      // 4 cal/g
 	targetFat := float64(targetCalories) * 0.30 / 9        // 9 cal/g
+
+	println("🍗 Macros: Protein =", targetProtein, "g, Carbs =", targetCarbs, "g, Fat =", targetFat, "g")
 
 	return &models.Goals{
 		BMR:            bmr,
