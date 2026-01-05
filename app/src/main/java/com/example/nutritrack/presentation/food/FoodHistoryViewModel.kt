@@ -50,7 +50,8 @@ class FoodHistoryViewModel(
                                         id = mealDto.id,
                                         name = mealDto.foodName,
                                         date = formatDate(mealDto.timestamp),
-                                        calories = mealDto.nutrition.calories
+                                        calories = mealDto.nutrition.calories,
+                                        mealType = mealDto.mealType
                                     )
                                 )
                             }
@@ -108,5 +109,6 @@ data class RecentMeal(
     val id: String,
     val name: String,
     val date: String,
-    val calories: Int
+    val calories: Int,
+    val mealType: String? = null
 )

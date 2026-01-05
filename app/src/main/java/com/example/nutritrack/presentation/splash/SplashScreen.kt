@@ -47,27 +47,24 @@ fun SplashScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.alpha(alphaAnim.value)
         ) {
-            // Logo placeholder - bisa diganti dengan logo actual
+            // Logo Image
+            Image(
+                painter = painterResource(id = R.drawable.logo_nutritrack),
+                contentDescription = "NutriTrack Logo",
+                modifier = Modifier.size(200.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "VENTURES",
+                text = "NutriTrack",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkGreen
             )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "PARTNERS",
+                text = "Track Your Nutrition Journey",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Light,
-                color = DarkGreen,
-                letterSpacing = 4.sp
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Text(
-                text = "NutriTrack",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold,
                 color = Color.Gray
             )
         }

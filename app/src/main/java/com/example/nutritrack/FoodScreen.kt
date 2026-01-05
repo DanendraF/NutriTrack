@@ -27,13 +27,6 @@ import com.example.nutritrack.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-data class FoodCategory(
-    val id: String,
-    val name: String,
-    val color: Color,
-    val icon: String = "🍎"
-)
-
 @Composable
 fun FoodScreen(
     onNavigateToFoodSearch: () -> Unit = {},
@@ -58,7 +51,7 @@ fun FoodScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundGray),
-        contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // Header
@@ -82,7 +75,8 @@ fun FoodScreen(
         // Category Section
         item {
             CategorySection(
-                onCategoryClick = onNavigateToCategory
+                onCategoryClick = onNavigateToCategory,
+                recentMeals = recentMeals
             )
         }
     }
@@ -112,8 +106,8 @@ private fun FoodScreenTopBar(userName: String) {
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Food Screen",
-                fontSize = 16.sp,
+                "Hai $userName!",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextBlack
             )
@@ -342,9 +336,10 @@ private fun CategorySection(
 }
 
 @Composable
-private fun CategoryBadge(
-    category: FoodCategory,
-    onClick: () -> Unit
+private fun MealTypeSection(
+    title: String,
+    meals: List<com.example.nutritrack.presentation.food.RecentMeal>,
+    color: Color
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -356,11 +351,11 @@ private fun CategoryBadge(
             // Category badge
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = category.color,
+                color = color,
                 modifier = Modifier.wrapContentWidth()
             ) {
                 Text(
-                    text = category.name,
+                    text = title,
                     fontSize = 12.sp,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
@@ -370,36 +365,40 @@ private fun CategoryBadge(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Food items grid (placeholder)
+            // Meal items
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                repeat(3) {
+                meals.forEach { meal ->
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .weight(1f)
+                            .height(100.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF5F5F5))
-                            .clickable(onClick = onClick),
+                            .background(Color(0xFFF5F5F5)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(8.dp)
+                        ) {
                             Icon(
                                 Icons.Default.Restaurant,
                                 contentDescription = null,
-                                tint = category.color,
+                                tint = color,
                                 modifier = Modifier.size(32.dp)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "Salad Bush",
+                                meal.name,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = TextBlack
+                                color = TextBlack,
+                                maxLines = 1
                             )
                             Text(
-                                "100 kcal",
+                                "${meal.calories} kcal",
                                 fontSize = 9.sp,
                                 color = TextGray
                             )

@@ -36,6 +36,7 @@ import org.koin.androidx.compose.koinViewModel
 fun TipsScreen(
     viewModel: TipsViewModel = koinViewModel(),
     authViewModel: FirebaseAuthViewModel = koinViewModel(),
+    homeViewModel: com.example.nutritrack.presentation.home.HomeViewModel = koinViewModel(),
     onNavigateToArticleDetail: (Article) -> Unit = {}
 ) {
     val tips by viewModel.tips.collectAsState()
@@ -43,19 +44,32 @@ fun TipsScreen(
     val articles by viewModel.articles.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    val homeUiState by homeViewModel.uiState.collectAsState()
+
     // Get user info
     val userName = "Farrell" // TODO: Get from user profile
+
+    // Calculate progress percentage
+    val progressPercentage = if (homeUiState.targetCalories > 0) {
+        (homeUiState.consumedCalories.toFloat() / homeUiState.targetCalories.toFloat() * 100f)
+    } else {
+        0f
+    }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundGray),
-        contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // Header with profile
         item {
-            TipsScreenTopBar(userName = userName)
+            TipsScreenTopBar(
+                userName = userName,
+                consumedCalories = homeUiState.consumedCalories,
+                progressPercentage = progressPercentage
+            )
         }
 
         // Rekomendasi Harian Section
@@ -104,7 +118,11 @@ fun TipsScreen(
 }
 
 @Composable
-private fun TipsScreenTopBar(userName: String) {
+private fun TipsScreenTopBar(
+    userName: String,
+    consumedCalories: Int,
+    progressPercentage: Float
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -127,13 +145,14 @@ private fun TipsScreenTopBar(userName: String) {
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Hoi $userName!",
+                "Hai $userName!",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextBlack
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                "180 kcal - 85% from",
+                "$consumedCalories kcal - ${progressPercentage.toInt()}%",
                 fontSize = 12.sp,
                 color = TextGray
             )

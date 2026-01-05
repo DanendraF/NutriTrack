@@ -237,6 +237,18 @@ class HomeViewModel(
                                     ((totalCalories.toFloat() / state.targetCalories) * 100).toInt().coerceAtMost(100)
                                 } else 0
 
+                                // Update today's calories in weekly data
+                                val updatedWeeklyCalories = if (state.weeklyCalories.isNotEmpty()) {
+                                    state.weeklyCalories.toMutableList().apply {
+                                        // Update last day (today) with current calories
+                                        if (size == 7) {
+                                            this[6] = this[6].first to totalCalories
+                                        }
+                                    }
+                                } else {
+                                    state.weeklyCalories
+                                }
+
                                 state.copy(
                                     consumedCalories = totalCalories,
                                     consumedProtein = totalProtein,
@@ -245,6 +257,7 @@ class HomeViewModel(
                                     remainingCalories = remaining,
                                     progressPercentage = progress,
                                     todayMeals = meals,
+                                    weeklyCalories = updatedWeeklyCalories,
                                     isLoading = false,
                                     error = null
                                 )

@@ -75,7 +75,15 @@ fun HomeScreen(
         }
     }
 
-    // Refresh data when returning to this screen
+    // Refresh data when returning to this screen (e.g., after adding meal)
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            // Refresh when leaving screen (so it's fresh when coming back)
+            viewModel.refreshData()
+        }
+    }
+
+    // Also refresh when screen first loads
     LaunchedEffect(key1 = true) {
         viewModel.refreshData()
     }
@@ -86,6 +94,8 @@ fun HomeScreen(
             is com.example.nutritrack.domain.model.UiState.Success -> {
                 snackbarHostState.showSnackbar("Meal deleted successfully")
                 mealViewModel.resetDeleteState()
+                // Refresh data after successful deletion
+                viewModel.refreshData()
             }
             is com.example.nutritrack.domain.model.UiState.Error -> {
                 snackbarHostState.showSnackbar(
@@ -103,7 +113,8 @@ fun HomeScreen(
             FloatingActionButton(
                 onClick = onNavigateToAddMeal,
                 containerColor = DarkGreen,
-                contentColor = Color.White
+                contentColor = Color.White,
+                modifier = Modifier.padding(bottom = 80.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Meal")
             }
@@ -114,7 +125,7 @@ fun HomeScreen(
                     .fillMaxSize()
                     .background(BackgroundGray)
                     .padding(paddingValues),
-                contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 item {
@@ -132,6 +143,7 @@ fun HomeScreen(
                         target = uiState.targetCalories,
                         remaining = uiState.remainingCalories,
                         progress = uiState.progressPercentage / 100f,
+                        weeklyCalories = uiState.weeklyCalories,
                         onClick = onNavigateToCaloriesDetail
                     )
                 }
@@ -196,8 +208,8 @@ private fun HomeTopBar(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Hoi $userName!",
-                fontSize = 16.sp,
+                "Hai $userName!",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextBlack
             )
@@ -233,6 +245,7 @@ private fun CaloriesCard(
     target: Int,
     remaining: Int,
     progress: Float,
+    weeklyCalories: List<Pair<String, Int>>,
     onClick: () -> Unit = {}
 ) {
     Card(
@@ -303,12 +316,132 @@ private fun CaloriesCard(
                 trackColor = LightGreen,
                 strokeCap = StrokeCap.Round
             )
-            Spacer(modifier = Modifier.height(4.dp))
+
+            // Weekly Progress Chart
+            Spacer(modifier = Modifier.height(20.dp))
             Text(
-                "Remaining $remaining kcal",
-                fontSize = 12.sp,
-                color = Color.Gray
+                "Weekly Progress",
+                fontSize = 14.sp,
+                color = TextGray,
+                fontWeight = FontWeight.Medium
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            WeeklyProgressChart(
+                weeklyCalories = weeklyCalories,
+                targetCalories = target
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeeklyProgressChart(
+    weeklyCalories: List<Pair<String, Int>>,
+    targetCalories: Int
+) {
+    var selectedDayIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Use real data from API, if empty use empty list
+    val weekDays = if (weeklyCalories.isNotEmpty()) {
+        weeklyCalories.map { it.first } // "Mon", "Tue", etc from API
+    } else {
+        listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    }
+
+    val weekDaysShort = weekDays.map { it.first().toString() } // "M", "T", "W", etc
+
+    val caloriesData = if (weeklyCalories.isNotEmpty()) {
+        weeklyCalories.map { it.second } // Actual calories from API
+    } else {
+        listOf(0, 0, 0, 0, 0, 0, 0) // Empty data if no API data
+    }
+
+    val progressData = caloriesData.map {
+        if (targetCalories > 0) (it.toFloat() / targetCalories).coerceIn(0f, 1f)
+        else 0f
+    }
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            progressData.forEachIndexed { index, progressValue ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedDayIndex = index }
+                ) {
+                    // Bar
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp)
+                            .height((progressValue * 80).dp.coerceAtLeast(4.dp))
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(
+                                when {
+                                    selectedDayIndex == index -> LightGreen
+                                    index == progressData.lastIndex -> DarkGreen
+                                    else -> DarkGreen.copy(alpha = 0.5f)
+                                }
+                            )
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    // Day label
+                    Text(
+                        text = weekDaysShort[index],
+                        fontSize = 10.sp,
+                        color = when {
+                            selectedDayIndex == index -> LightGreen
+                            index == progressData.lastIndex -> DarkGreen
+                            else -> TextGray
+                        },
+                        fontWeight = if (index == progressData.lastIndex || selectedDayIndex == index)
+                            FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+
+        // Show selected day details
+        selectedDayIndex?.let { index ->
+            Spacer(modifier = Modifier.height(12.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = LightGreen.copy(alpha = 0.1f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, LightGreen)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = weekDays[index],
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DarkGreen
+                        )
+                        Text(
+                            text = "${caloriesData[index]} kcal consumed",
+                            fontSize = 12.sp,
+                            color = TextGray
+                        )
+                    }
+                    Text(
+                        text = "${(progressData[index] * 100).toInt()}%",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkGreen
+                    )
+                }
+            }
         }
     }
 }
