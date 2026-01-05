@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Environment variables - DO NOT COMMIT
+.env
+*.env
+!.env.example

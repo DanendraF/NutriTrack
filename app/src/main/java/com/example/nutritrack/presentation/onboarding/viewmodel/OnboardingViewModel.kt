@@ -3,6 +3,8 @@ package com.example.nutritrack.presentation.onboarding.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nutritrack.data.remote.Result
+import com.example.nutritrack.data.remote.openai.NutritionCalculationRequest
+import com.example.nutritrack.data.remote.openai.OpenAIService
 import com.example.nutritrack.data.repository.ApiUserRepository
 import com.example.nutritrack.data.repository.UserRepository
 import com.example.nutritrack.domain.model.*
@@ -28,6 +30,9 @@ data class OnboardingState(
     val calculatedCalories: Int = 0,
     val calculatedMacros: Macros? = null,
     val isSaving: Boolean = false,
+    val isCalculatingWithGPT: Boolean = false,
+    val gptAnalysis: String = "",
+    val gptTips: List<String> = emptyList(),
     val saveError: String? = null,
     val saveSuccess: Boolean = false
 )
@@ -35,7 +40,8 @@ data class OnboardingState(
 class OnboardingViewModel(
     private val userRepository: UserRepository,
     private val apiUserRepository: ApiUserRepository,
-    private val firebaseAuth: FirebaseAuth
+    private val firebaseAuth: FirebaseAuth,
+    private val openAIService: OpenAIService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingState())
@@ -119,15 +125,58 @@ class OnboardingViewModel(
             return
         }
 
-        android.util.Log.d("OnboardingViewModel", "Validation passed, starting API call...")
+        android.util.Log.d("OnboardingViewModel", "Validation passed, starting GPT calculation...")
 
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isSaving = true, saveError = null) }
+                _uiState.update { it.copy(isSaving = true, isCalculatingWithGPT = true, saveError = null) }
 
                 val weight = state.weight.toDouble()
                 val height = state.height.toDouble()
                 val age = state.age.toInt()
+
+                // STEP 1: Call GPT to calculate nutrition
+                android.util.Log.d("OnboardingViewModel", "🤖 Calling GPT API for nutrition calculation...")
+
+                val gptRequest = NutritionCalculationRequest(
+                    age = age,
+                    gender = state.gender,
+                    height = height.toInt(),
+                    weight = weight.toInt(),
+                    activityLevel = state.activityLevel,
+                    goal = state.goal
+                )
+
+                val gptResult = openAIService.calculateNutrition(gptRequest)
+
+                var targetCalories = 2000
+                var targetProtein = 150
+                var targetCarbs = 250
+                var targetFat = 67
+
+                if (gptResult.isSuccess) {
+                    val response = gptResult.getOrThrow()
+                    android.util.Log.d("OnboardingViewModel", "✅ GPT Success: ${response.targetCalories} kcal")
+                    android.util.Log.d("OnboardingViewModel", "📊 Protein: ${response.targetProtein}g, Carbs: ${response.targetCarbs}g, Fat: ${response.targetFat}g")
+                    android.util.Log.d("OnboardingViewModel", "💡 Analysis: ${response.analysis}")
+
+                    targetCalories = response.targetCalories
+                    targetProtein = response.targetProtein
+                    targetCarbs = response.targetCarbs
+                    targetFat = response.targetFat
+
+                    _uiState.update {
+                        it.copy(
+                            gptAnalysis = response.analysis,
+                            gptTips = response.tips,
+                            isCalculatingWithGPT = false
+                        )
+                    }
+                } else {
+                    android.util.Log.e("OnboardingViewModel", "❌ GPT Failed: ${gptResult.exceptionOrNull()?.message}")
+                    android.util.Log.d("OnboardingViewModel", "Using fallback calculation...")
+                    _uiState.update { it.copy(isCalculatingWithGPT = false) }
+                }
 
                 // Calculate date of birth from age
                 val dateOfBirth = LocalDate.now().minusYears(age.toLong()).toString()
@@ -158,8 +207,11 @@ class OnboardingViewModel(
                             val userResponse = result.data
 
                             // Save to local Room database for offline access
+                            // Use GPT calculated values instead of backend values
                             val activityLevel = ActivityLevel.fromString(state.activityLevel)
                             val nutritionGoal = NutritionGoal.fromString(state.goal)
+
+                            android.util.Log.d("OnboardingViewModel", "💾 Saving with GPT values - Calories: $targetCalories, Protein: $targetProtein, Carbs: $targetCarbs, Fat: $targetFat")
 
                             val user = User(
                                 userId = userId,
@@ -171,11 +223,11 @@ class OnboardingViewModel(
                                 weight = weight.toFloat(),
                                 activityLevel = activityLevel,
                                 nutritionGoal = nutritionGoal,
-                                targetCalories = userResponse.goals.targetCalories,
+                                targetCalories = targetCalories, // From GPT
                                 targetMacros = Macros(
-                                    protein = userResponse.goals.targetProtein.toFloat(),
-                                    carbs = userResponse.goals.targetCarbs.toFloat(),
-                                    fat = userResponse.goals.targetFat.toFloat()
+                                    protein = targetProtein.toFloat(), // From GPT
+                                    carbs = targetCarbs.toFloat(), // From GPT
+                                    fat = targetFat.toFloat() // From GPT
                                 )
                             )
 
@@ -185,11 +237,11 @@ class OnboardingViewModel(
                                 it.copy(
                                     isSaving = false,
                                     saveSuccess = true,
-                                    calculatedCalories = userResponse.goals.targetCalories,
+                                    calculatedCalories = targetCalories, // Use GPT values, not backend
                                     calculatedMacros = Macros(
-                                        protein = userResponse.goals.targetProtein.toFloat(),
-                                        carbs = userResponse.goals.targetCarbs.toFloat(),
-                                        fat = userResponse.goals.targetFat.toFloat()
+                                        protein = targetProtein.toFloat(), // From GPT
+                                        carbs = targetCarbs.toFloat(), // From GPT
+                                        fat = targetFat.toFloat() // From GPT
                                     )
                                 )
                             }
