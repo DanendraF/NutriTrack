@@ -1,45 +1,54 @@
 package com.example.nutritrack
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.nutritrack.domain.model.UserSavedFood
-import com.example.nutritrack.presentation.food.UserSavedFoodViewModel
 import com.example.nutritrack.presentation.food.FoodHistoryViewModel
+import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+data class FoodCategory(
+    val id: String,
+    val name: String,
+    val color: Color,
+    val icon: String = "🍎"
+)
 
 @Composable
 fun FoodScreen(
     onNavigateToFoodSearch: () -> Unit = {},
-    viewModel: UserSavedFoodViewModel = koinViewModel(),
+    onNavigateToFoodHistory: () -> Unit = {},
+    onNavigateToCategory: (String) -> Unit = {},
+    onNavigateToRecipe: (String) -> Unit = {},
+    authViewModel: FirebaseAuthViewModel = koinViewModel(),
     foodHistoryViewModel: FoodHistoryViewModel = koinViewModel()
 ) {
-    val savedFoods by viewModel.savedFoods.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val recentMeals by foodHistoryViewModel.recentMeals.collectAsStateWithLifecycle()
+    val historyLoading by foodHistoryViewModel.isLoading.collectAsStateWithLifecycle()
 
-    val recentMeals by foodHistoryViewModel.recentMeals.collectAsState()
-    val historyLoading by foodHistoryViewModel.isLoading.collectAsState()
+    // Get user info
+    val currentUserId = authViewModel.getCurrentUserId()
+    val userName = "Farrell" // TODO: Get from user profile
 
     LaunchedEffect(Unit) {
         foodHistoryViewModel.loadRecentMeals()
@@ -52,67 +61,88 @@ fun FoodScreen(
         contentPadding = PaddingValues(vertical = 24.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        item { FoodTopBar() }
+        // Header
         item {
-            SavedFoodsSection(
-                savedFoods = savedFoods,
-                isLoading = isLoading,
-                onDeleteFood = { foodId -> viewModel.deleteFood(foodId) },
-                onQuickAddFood = { foodId -> viewModel.markFoodAsUsed(foodId) },
-                onNavigateToFoodSearch = onNavigateToFoodSearch
-            )
+            FoodScreenTopBar(userName = userName)
         }
+
+        // Food History Section
         item {
-            HistorySection(
+            FoodHistorySection(
                 recentMeals = recentMeals,
                 isLoading = historyLoading,
-                onSaveFood = { meal: com.example.nutritrack.presentation.food.RecentMeal ->
-                    // Convert RecentMeal to UserSavedFood
-                    val savedFood = UserSavedFood(
-                        id = "",
-                        userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "",
-                        foodId = meal.id,
-                        foodName = meal.name,
-                        servingSize = "1 portion",
-                        calories = meal.calories,
-                        protein = 0f,
-                        carbs = 0f,
-                        fat = 0f,
-                        note = "",
-                        customPortion = 1.0f,
-                        lastUsedAt = System.currentTimeMillis(),
-                        useCount = 0
-                    )
-                    viewModel.saveFood(savedFood)
+                onViewAll = onNavigateToFoodHistory,
+                onMealClick = { meal ->
+                    // Navigate to detail
+                    onNavigateToFoodHistory()
                 }
             )
         }
-    }
 
-    // Show error snackbar if there's an error
-    error?.let { errorMessage ->
-        LaunchedEffect(errorMessage) {
-            // TODO: Show snackbar with error message
-            viewModel.clearError()
+        // Category Section
+        item {
+            CategorySection(
+                onCategoryClick = onNavigateToCategory
+            )
         }
     }
 }
 
 @Composable
-private fun FoodTopBar() {
-    Column {
-        Text("My Foods", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextBlack)
-        Text("Your saved and frequently eaten foods", fontSize = 14.sp, color = TextGray)
+private fun FoodScreenTopBar(userName: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Profile Picture Circle
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(DarkGreen.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = userName.firstOrNull()?.uppercase() ?: "U",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = DarkGreen
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Food Screen",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextBlack
+            )
+        }
+        IconButton(onClick = { /* TODO: Search */ }) {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = "Search",
+                tint = TextGray,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        IconButton(onClick = { /* TODO: Settings */ }) {
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = TextGray,
+                modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
 
 @Composable
-private fun SavedFoodsSection(
-    savedFoods: List<UserSavedFood>,
+private fun FoodHistorySection(
+    recentMeals: List<com.example.nutritrack.presentation.food.RecentMeal>,
     isLoading: Boolean,
-    onDeleteFood: (String) -> Unit,
-    onQuickAddFood: (String) -> Unit,
-    onNavigateToFoodSearch: () -> Unit
+    onViewAll: () -> Unit,
+    onMealClick: (com.example.nutritrack.presentation.food.RecentMeal) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
@@ -120,171 +150,58 @@ private fun SavedFoodsSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Saved Foods", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextBlack)
-            TextButton(onClick = onNavigateToFoodSearch) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Add Food", fontSize = 14.sp)
-            }
-        }
-
-        when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            savedFoods.isEmpty() -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardBackground)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Restaurant,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = TextGray
-                        )
-                        Text("No saved foods yet", color = TextGray, fontSize = 14.sp)
-                        Text("Add foods you eat frequently", color = TextGray, fontSize = 12.sp)
-                    }
-                }
-            }
-            else -> {
-                savedFoods.forEach { food ->
-                    SavedFoodItem(
-                        food = food,
-                        onDelete = { onDeleteFood(food.id) },
-                        onQuickAdd = { onQuickAddFood(food.id) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SavedFoodItem(
-    food: UserSavedFood,
-    onDelete: () -> Unit,
-    onQuickAdd: () -> Unit = {}
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(LightGreen),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Restaurant,
-                    contentDescription = null,
-                    tint = DarkGreen
+            Text(
+                "Food History",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextBlack
+            )
+            TextButton(onClick = onViewAll) {
+                Text(
+                    "See All",
+                    fontSize = 14.sp,
+                    color = DarkGreen,
+                    fontWeight = FontWeight.Medium
                 )
             }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(food.foodName, fontWeight = FontWeight.SemiBold, color = TextBlack)
-                if (food.note.isNotEmpty()) {
-                    Text(food.note, fontSize = 12.sp, color = TextGray)
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "${food.calories} kcal",
-                        fontSize = 12.sp,
-                        color = DarkGreen,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text("•", fontSize = 12.sp, color = TextGray)
-                    Text(food.servingSize, fontSize = 12.sp, color = TextGray)
-                    if (food.customPortion != 1.0f) {
-                        Text("•", fontSize = 12.sp, color = TextGray)
-                        Text("${food.customPortion}x", fontSize = 12.sp, color = DarkGreen, fontWeight = FontWeight.Medium)
-                    }
-                }
-            }
-            IconButton(onClick = onQuickAdd) {
-                Icon(Icons.Default.Add, contentDescription = "Add to meal", tint = DarkGreen)
-            }
         }
-    }
-}
-
-@Composable
-private fun HistorySection(
-    recentMeals: List<com.example.nutritrack.presentation.food.RecentMeal>,
-    isLoading: Boolean,
-    onSaveFood: (com.example.nutritrack.presentation.food.RecentMeal) -> Unit = {}
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Recent Foods", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = TextBlack)
 
         if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(32.dp),
-                    color = DarkGreen
-                )
-            }
-        } else if (recentMeals.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = DarkGreen)
+            }
+        } else if (recentMeals.isEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackground)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Icon(
                         Icons.Default.Restaurant,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
-                        tint = TextGray.copy(alpha = 0.5f)
+                        tint = TextGray
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "No recent meals",
-                        fontSize = 14.sp,
-                        color = TextGray
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("No food history yet", fontSize = 14.sp, color = TextGray)
                 }
             }
         } else {
-            recentMeals.forEach { meal ->
-                HistoryItem(
+            recentMeals.take(3).forEach { meal ->
+                FoodHistoryItem(
                     meal = meal,
-                    onSave = { onSaveFood(meal) }
+                    onClick = { onMealClick(meal) }
                 )
             }
         }
@@ -292,54 +209,166 @@ private fun HistorySection(
 }
 
 @Composable
-private fun HistoryItem(
+private fun FoodHistoryItem(
     meal: com.example.nutritrack.presentation.food.RecentMeal,
-    onSave: () -> Unit = {}
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Food icon
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(DarkGreen.copy(alpha = 0.1f)),
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF5F5F5)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Restaurant,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = DarkGreen
+                    tint = DarkGreen,
+                    modifier = Modifier.size(32.dp)
                 )
             }
-            Spacer(Modifier.width(16.dp))
+
+            Spacer(modifier = Modifier.width(12.dp))
+
             Column(modifier = Modifier.weight(1f)) {
-                Text(meal.name, fontWeight = FontWeight.SemiBold, color = TextBlack)
-                Text("${meal.date} • ${meal.calories} kcal", fontSize = 12.sp, color = TextGray)
-            }
-            Button(
-                onClick = onSave,
-                modifier = Modifier.height(36.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Text("Save", fontSize = 12.sp)
+                Text(
+                    text = meal.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = TextBlack
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${meal.date} • ${meal.calories} kcal",
+                    fontSize = 12.sp,
+                    color = TextGray
+                )
             }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun FoodScreenPreview() {
-    NutriTrackTheme { FoodScreen() }
+private fun CategorySection(
+    onCategoryClick: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Category",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextBlack
+            )
+            TextButton(onClick = { /* TODO */ }) {
+                Text(
+                    "See All",
+                    fontSize = 14.sp,
+                    color = DarkGreen,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        // Food categories
+        val categories = listOf(
+            FoodCategory("sarapan", "Sarapan", Color(0xFFFFA726)),
+            FoodCategory("makan_siang", "Makan Siang", Color(0xFF66BB6A)),
+            FoodCategory("camilan", "Camilan", Color(0xFF42A5F5))
+        )
+
+        categories.forEach { category ->
+            CategoryBadge(
+                category = category,
+                onClick = { onCategoryClick(category.id) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryBadge(
+    category: FoodCategory,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Category badge
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = category.color,
+                modifier = Modifier.wrapContentWidth()
+            ) {
+                Text(
+                    text = category.name,
+                    fontSize = 12.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Food items grid (placeholder)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF5F5F5))
+                            .clickable(onClick = onClick),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Restaurant,
+                                contentDescription = null,
+                                tint = category.color,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Salad Bush",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextBlack
+                            )
+                            Text(
+                                "100 kcal",
+                                fontSize = 9.sp,
+                                color = TextGray
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

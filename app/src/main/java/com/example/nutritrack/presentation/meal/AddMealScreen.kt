@@ -1,7 +1,9 @@
 package com.example.nutritrack.presentation.meal
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,7 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.nutritrack.domain.model.MealType
 import com.example.nutritrack.domain.model.UiState
 import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
-import com.example.nutritrack.ui.theme.DarkGreen
+import com.example.nutritrack.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +41,7 @@ fun AddMealScreen(
     LaunchedEffect(saveMealState) {
         when (saveMealState) {
             is UiState.Success -> {
-                snackbarHostState.showSnackbar("Meal saved successfully!")
+                snackbarHostState.showSnackbar("Makanan berhasil disimpan!")
                 viewModel.resetSaveState()
                 viewModel.resetForm()
                 onNavigateBack()
@@ -57,235 +59,378 @@ fun AddMealScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Meal") },
+                title = {
+                    Text(
+                        "Tambah Makanan",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = TextBlack
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            "Back",
+                            tint = TextBlack
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DarkGreen,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    containerColor = Color.White
                 )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = BackgroundGray
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Search Food Button
-            OutlinedButton(
-                onClick = onNavigateToFoodSearch,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = Color.Transparent
-                )
-            ) {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Search Food from Database")
-            }
-
-            // Food Name
-            OutlinedTextField(
-                value = uiState.foodName,
-                onValueChange = { viewModel.updateFoodName(it) },
-                label = { Text("Food Name") },
-                leadingIcon = {
-                    Icon(Icons.Default.Restaurant, contentDescription = null)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            // Meal Type Selection
-            Text(
-                text = "Meal Type",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MealType.values().forEach { mealType ->
-                    FilterChip(
-                        selected = uiState.mealType == mealType,
-                        onClick = { viewModel.updateMealType(mealType) },
-                        label = { Text(mealType.displayName) },
-                        modifier = Modifier.weight(1f),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DarkGreen,
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
-            }
-
-            Divider()
-
-            // Serving Size & Quantity
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = uiState.servingSize,
-                    onValueChange = { viewModel.updateServingSize(it) },
-                    label = { Text("Serving Size") },
-                    placeholder = { Text("e.g., 100g, 1 cup") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = uiState.quantity.toString(),
-                    onValueChange = {
-                        it.toFloatOrNull()?.let { qty -> viewModel.updateQuantity(qty) }
-                    },
-                    label = { Text("Quantity") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-            }
-
-            // Quantity Stepper
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        if (uiState.quantity > 0.5f) {
-                            viewModel.updateQuantity(uiState.quantity - 0.5f)
-                        }
-                    }
-                ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Decrease")
-                }
-
-                Text(
-                    text = String.format("%.1f", uiState.quantity),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-
-                IconButton(
-                    onClick = { viewModel.updateQuantity(uiState.quantity + 0.5f) }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Increase")
-                }
-            }
-
-            Divider()
-
-            // Nutrition Info (Per Serving)
-            Text(
-                text = "Nutrition per Serving",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            // Calories
-            OutlinedTextField(
-                value = if (uiState.caloriesPerServing == 0) "" else uiState.caloriesPerServing.toString(),
-                onValueChange = {
-                    it.toIntOrNull()?.let { cal -> viewModel.updateCaloriesPerServing(cal) }
-                        ?: if (it.isEmpty()) viewModel.updateCaloriesPerServing(0) else {}
-                },
-                label = { Text("Calories (kcal)") },
-                leadingIcon = {
-                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null)
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Protein
-                OutlinedTextField(
-                    value = if (uiState.proteinPerServing == 0) "" else uiState.proteinPerServing.toString(),
-                    onValueChange = {
-                        it.toIntOrNull()?.let { protein -> viewModel.updateProteinPerServing(protein) }
-                            ?: if (it.isEmpty()) viewModel.updateProteinPerServing(0) else {}
-                    },
-                    label = { Text("Protein (g)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-
-                // Carbs
-                OutlinedTextField(
-                    value = if (uiState.carbsPerServing == 0) "" else uiState.carbsPerServing.toString(),
-                    onValueChange = {
-                        it.toIntOrNull()?.let { carbs -> viewModel.updateCarbsPerServing(carbs) }
-                            ?: if (it.isEmpty()) viewModel.updateCarbsPerServing(0) else {}
-                    },
-                    label = { Text("Carbs (g)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-
-                // Fat
-                OutlinedTextField(
-                    value = if (uiState.fatPerServing == 0) "" else uiState.fatPerServing.toString(),
-                    onValueChange = {
-                        it.toIntOrNull()?.let { fat -> viewModel.updateFatPerServing(fat) }
-                            ?: if (it.isEmpty()) viewModel.updateFatPerServing(0) else {}
-                    },
-                    label = { Text("Fat (g)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-            }
-
-            Divider()
-
-            // Total Nutrition Summary
+            // Main Content Card
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F4F6))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackground),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    Text(
-                        text = "Total Nutrition",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Search Food Button
+                    OutlinedButton(
+                        onClick = onNavigateToFoodSearch,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = DarkGreen
+                        ),
+                        contentPadding = PaddingValues(vertical = 14.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Cari dari Database", fontSize = 14.sp)
+                    }
 
-                    NutritionRow("Calories", "${uiState.totalCalories} kcal", Icons.Default.LocalFireDepartment)
-                    NutritionRow("Protein", "${uiState.totalProtein}g")
-                    NutritionRow("Carbs", "${uiState.totalCarbs}g")
-                    NutritionRow("Fat", "${uiState.totalFat}g")
+                    HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                    // Food Name Section
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Informasi Makanan",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextBlack
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.foodName,
+                            onValueChange = { viewModel.updateFoodName(it) },
+                            label = { Text("Nama Makanan", fontSize = 14.sp) },
+                            placeholder = { Text("Contoh: Nasi Goreng", fontSize = 14.sp) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Restaurant,
+                                    contentDescription = null,
+                                    tint = DarkGreen
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = DarkGreen,
+                                focusedLabelColor = DarkGreen,
+                                cursorColor = DarkGreen
+                            )
+                        )
+                    }
+
+                    // Meal Type Selection
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Waktu Makan",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextBlack
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            MealType.values().forEach { mealType ->
+                                FilterChip(
+                                    selected = uiState.mealType == mealType,
+                                    onClick = { viewModel.updateMealType(mealType) },
+                                    label = {
+                                        Text(
+                                            mealType.displayName,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = DarkGreen,
+                                        selectedLabelColor = Color.White,
+                                        containerColor = Color(0xFFF5F5F5)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                    // Serving & Quantity Section
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Porsi & Jumlah",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextBlack
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = uiState.servingSize,
+                                onValueChange = { viewModel.updateServingSize(it) },
+                                label = { Text("Ukuran", fontSize = 14.sp) },
+                                placeholder = { Text("100g", fontSize = 14.sp) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = DarkGreen,
+                                    focusedLabelColor = DarkGreen,
+                                    cursorColor = DarkGreen
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = uiState.quantity.toString(),
+                                onValueChange = {
+                                    it.toFloatOrNull()?.let { qty -> viewModel.updateQuantity(qty) }
+                                },
+                                label = { Text("Jumlah", fontSize = 14.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = DarkGreen,
+                                    focusedLabelColor = DarkGreen,
+                                    cursorColor = DarkGreen
+                                )
+                            )
+                        }
+
+                        // Quantity Stepper
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFF5F5F5)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        if (uiState.quantity > 0.5f) {
+                                            viewModel.updateQuantity(uiState.quantity - 0.5f)
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.RemoveCircle,
+                                        contentDescription = "Kurangi",
+                                        tint = DarkGreen,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+
+                                Text(
+                                    text = String.format("%.1f", uiState.quantity),
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DarkGreen,
+                                    modifier = Modifier.padding(horizontal = 32.dp)
+                                )
+
+                                IconButton(
+                                    onClick = { viewModel.updateQuantity(uiState.quantity + 0.5f) }
+                                ) {
+                                    Icon(
+                                        Icons.Default.AddCircle,
+                                        contentDescription = "Tambah",
+                                        tint = DarkGreen,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                    // Nutrition Info Section
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Informasi Nutrisi (Per Porsi)",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextBlack
+                        )
+
+                        // Calories
+                        OutlinedTextField(
+                            value = if (uiState.caloriesPerServing == 0) "" else uiState.caloriesPerServing.toString(),
+                            onValueChange = {
+                                it.toIntOrNull()?.let { cal -> viewModel.updateCaloriesPerServing(cal) }
+                                    ?: if (it.isEmpty()) viewModel.updateCaloriesPerServing(0) else {}
+                            },
+                            label = { Text("Kalori", fontSize = 14.sp) },
+                            placeholder = { Text("kcal", fontSize = 14.sp) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.LocalFireDepartment,
+                                    contentDescription = null,
+                                    tint = DarkGreen
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = DarkGreen,
+                                focusedLabelColor = DarkGreen,
+                                cursorColor = DarkGreen
+                            )
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Protein
+                            OutlinedTextField(
+                                value = if (uiState.proteinPerServing == 0) "" else uiState.proteinPerServing.toString(),
+                                onValueChange = {
+                                    it.toIntOrNull()?.let { protein -> viewModel.updateProteinPerServing(protein) }
+                                        ?: if (it.isEmpty()) viewModel.updateProteinPerServing(0) else {}
+                                },
+                                label = { Text("Protein", fontSize = 14.sp) },
+                                placeholder = { Text("g", fontSize = 14.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = DarkGreen,
+                                    focusedLabelColor = DarkGreen,
+                                    cursorColor = DarkGreen
+                                )
+                            )
+
+                            // Carbs
+                            OutlinedTextField(
+                                value = if (uiState.carbsPerServing == 0) "" else uiState.carbsPerServing.toString(),
+                                onValueChange = {
+                                    it.toIntOrNull()?.let { carbs -> viewModel.updateCarbsPerServing(carbs) }
+                                        ?: if (it.isEmpty()) viewModel.updateCarbsPerServing(0) else {}
+                                },
+                                label = { Text("Karbo", fontSize = 14.sp) },
+                                placeholder = { Text("g", fontSize = 14.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = DarkGreen,
+                                    focusedLabelColor = DarkGreen,
+                                    cursorColor = DarkGreen
+                                )
+                            )
+
+                            // Fat
+                            OutlinedTextField(
+                                value = if (uiState.fatPerServing == 0) "" else uiState.fatPerServing.toString(),
+                                onValueChange = {
+                                    it.toIntOrNull()?.let { fat -> viewModel.updateFatPerServing(fat) }
+                                        ?: if (it.isEmpty()) viewModel.updateFatPerServing(0) else {}
+                                },
+                                label = { Text("Lemak", fontSize = 14.sp) },
+                                placeholder = { Text("g", fontSize = 14.sp) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = DarkGreen,
+                                    focusedLabelColor = DarkGreen,
+                                    cursorColor = DarkGreen
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Total Nutrition Summary Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = DarkGreen.copy(alpha = 0.1f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Total Nutrisi",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkGreen
+                    )
+
+                    NutritionRow("Kalori", "${uiState.totalCalories} kcal", Icons.Default.LocalFireDepartment)
+                    NutritionRow("Protein", "${uiState.totalProtein}g")
+                    NutritionRow("Karbohidrat", "${uiState.totalCarbs}g")
+                    NutritionRow("Lemak", "${uiState.totalFat}g")
+                }
+            }
 
             // Save Button
             Button(
@@ -297,9 +442,11 @@ fun AddMealScreen(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .padding(16.dp),
                 enabled = saveMealState !is UiState.Loading && uiState.foodName.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = DarkGreen),
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 if (saveMealState is UiState.Loading) {
                     CircularProgressIndicator(
@@ -309,7 +456,7 @@ fun AddMealScreen(
                 } else {
                     Icon(Icons.Default.Check, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Meal", fontSize = 16.sp)
+                    Text("Simpan Makanan", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -339,7 +486,11 @@ private fun NutritionRow(
                     modifier = Modifier.size(20.dp)
                 )
             }
-            Text(text = label, fontSize = 16.sp)
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                color = TextBlack
+            )
         }
         Text(
             text = value,

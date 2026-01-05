@@ -41,6 +41,7 @@ import java.util.*
 @Composable
 fun HomeScreen(
     onNavigateToAddMeal: () -> Unit = {},
+    onNavigateToCaloriesDetail: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
     authViewModel: FirebaseAuthViewModel = koinViewModel(),
     mealViewModel: MealViewModel = koinViewModel()
@@ -112,7 +113,8 @@ fun HomeScreen(
                         consumed = uiState.consumedCalories.toFloat(),
                         target = uiState.targetCalories,
                         remaining = uiState.remainingCalories,
-                        progress = uiState.progressPercentage / 100f
+                        progress = uiState.progressPercentage / 100f,
+                        onClick = onNavigateToCaloriesDetail
                     )
                 }
                 item {
@@ -158,39 +160,51 @@ private fun HomeTopBar(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Profile Picture Circle
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(52.dp)
                 .clip(CircleShape)
-                .background(DarkGreen.copy(alpha = 0.2f)),
+                .background(DarkGreen.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = userName.firstOrNull()?.uppercase() ?: "U",
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = DarkGreen
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "Hai $userName!",
-                fontSize = 18.sp,
+                "Hoi $userName!",
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextBlack
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                "Daily Goals : $targetCalories kcal - ${progressPercentage.toInt()}% Done",
-                fontSize = 12.sp,
+                "Daily Goals: $targetCalories kcal - ${progressPercentage.toInt()}% Done",
+                fontSize = 11.sp,
                 color = TextGray
             )
         }
         IconButton(onClick = onSyncClick) {
-            Icon(Icons.Default.Cloud, contentDescription = "Sync", tint = TextGray)
+            Icon(
+                Icons.Default.Cloud,
+                contentDescription = "Sync",
+                tint = TextGray,
+                modifier = Modifier.size(22.dp)
+            )
         }
         IconButton(onClick = onSettingsClick) {
-            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextGray)
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = TextGray,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
@@ -200,51 +214,63 @@ private fun CaloriesCard(
     consumed: Float,
     target: Int,
     remaining: Int,
-    progress: Float
+    progress: Float,
+    onClick: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Calories", fontSize = 14.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.height(8.dp))
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text("Calories", fontSize = 16.sp, color = TextGray, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = buildAnnotatedString {
-                        withStyle(
-                            style = SpanStyle(
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        ) {
-                            append("${consumed.toInt()}")
+                Column {
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(
+                                style = SpanStyle(
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextBlack
+                                )
+                            ) {
+                                append("${consumed.toInt()}")
+                            }
+                            withStyle(style = SpanStyle(fontSize = 20.sp, color = TextGray)) {
+                                append(" / ${target} kcal")
+                            }
                         }
-                        withStyle(style = SpanStyle(fontSize = 18.sp, color = Color.Gray)) {
-                            append(" / $target kcal")
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Remaining $remaining kcal",
+                        fontSize = 14.sp,
+                        color = TextGray
+                    )
+                }
                 Box(contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         progress = { progress.coerceIn(0f, 1f) },
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(80.dp),
                         color = DarkGreen,
-                        strokeWidth = 6.dp,
-                        trackColor = LightGreen,
+                        strokeWidth = 8.dp,
+                        trackColor = LightGreen.copy(alpha = 0.3f),
                         strokeCap = StrokeCap.Round
                     )
                     Text(
                         "${(progress * 100).toInt()}%",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 16.sp,
+                        color = TextBlack
                     )
                 }
             }
@@ -275,17 +301,23 @@ private fun TodayMealsSection(
     todayDate: String,
     onDeleteMeal: (Meal) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Today's meals", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Today's meals",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextBlack
+            )
             Text(
                 DateUtils.formatDateForDisplay(todayDate),
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = TextGray,
+                fontWeight = FontWeight.Medium
             )
         }
 
@@ -378,98 +410,65 @@ private fun MealItemCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Food icon
+            // Food image placeholder (circular)
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(64.dp)
                     .clip(CircleShape)
-                    .background(mealTypeColor.copy(alpha = 0.1f)),
+                    .background(Color(0xFFF5F5F5)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Restaurant,
                     contentDescription = null,
                     tint = mealTypeColor,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             // Meal info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = meal.foodName,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = TextBlack
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${meal.quantity} × ${meal.servingSize}",
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = " • ",
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = mealTime,
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${meal.calories} kcal • P:${meal.protein}g C:${meal.carbs}g F:${meal.fat}g",
+                    text = "${meal.calories} kcal",
                     fontSize = 12.sp,
-                    color = DarkGreen,
-                    fontWeight = FontWeight.Medium
+                    color = TextGray
                 )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Meal type badge & delete
-            Column(horizontalAlignment = Alignment.End) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(mealTypeColor)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        meal.mealType.displayName,
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                IconButton(
-                    onClick = { showDeleteDialog = true },
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+            // Meal type badge
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(mealTypeColor)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    meal.mealType.displayName.uppercase(),
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

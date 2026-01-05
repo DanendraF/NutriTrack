@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Home
@@ -15,8 +16,13 @@ import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +57,8 @@ import com.example.nutritrack.domain.model.Article
 import org.koin.android.ext.android.inject
 
 import com.example.nutritrack.ui.theme.NutriTrackTheme
+import com.example.nutritrack.ui.theme.DarkGreen
+import com.example.nutritrack.ui.theme.LightGreen
 
 // Rute global untuk navigasi utama
 object GlobalRoutes {
@@ -176,13 +184,28 @@ fun MainAppLayout(appNavController: NavHostController) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = Color.White,
+                tonalElevation = 8.dp
+            ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
                 bottomNavItems.forEach { screen ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.label) },
-                        label = { Text(screen.label) },
+                        icon = {
+                            Icon(
+                                screen.icon,
+                                contentDescription = screen.label,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        },
+                        label = {
+                            Text(
+                                screen.label,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
@@ -190,7 +213,14 @@ fun MainAppLayout(appNavController: NavHostController) {
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                        }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = DarkGreen,
+                            selectedTextColor = DarkGreen,
+                            indicatorColor = LightGreen.copy(alpha = 0.2f),
+                            unselectedIconColor = Color(0xFF9E9E9E),
+                            unselectedTextColor = Color(0xFF9E9E9E)
+                        )
                     )
                 }
             }
@@ -205,6 +235,18 @@ fun MainAppLayout(appNavController: NavHostController) {
                 HomeScreen(
                     onNavigateToAddMeal = {
                         navController.navigate("add_meal")
+                    },
+                    onNavigateToCaloriesDetail = {
+                        navController.navigate("calories_detail")
+                    }
+                )
+            }
+
+            // Calories Detail Screen
+            composable("calories_detail") {
+                com.example.nutritrack.presentation.calories.CaloriesDetailScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
                     }
                 )
             }
@@ -212,6 +254,15 @@ fun MainAppLayout(appNavController: NavHostController) {
                 FoodScreen(
                     onNavigateToFoodSearch = {
                         navController.navigate("food_search_standalone")
+                    },
+                    onNavigateToFoodHistory = {
+                        navController.navigate("food_history_detail")
+                    },
+                    onNavigateToCategory = { categoryId ->
+                        navController.navigate("category_food/$categoryId")
+                    },
+                    onNavigateToRecipe = { recipeId ->
+                        navController.navigate("food_recipe/$recipeId")
                     }
                 )
             }
@@ -355,6 +406,37 @@ fun MainAppLayout(appNavController: NavHostController) {
                         // Navigate back to FoodScreen
                         navController.popBackStack()
                     },
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Food History Detail Screen
+            composable("food_history_detail") {
+                com.example.nutritrack.presentation.food.FoodHistoryDetailScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Category Food Screen
+            composable("category_food/{categoryId}") { backStackEntry ->
+                val categoryId = backStackEntry.arguments?.getString("categoryId") ?: ""
+                com.example.nutritrack.presentation.food.CategoryFoodScreen(
+                    categoryId = categoryId,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            // Food Recipe Screen
+            composable("food_recipe/{recipeId}") { backStackEntry ->
+                val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
+                com.example.nutritrack.presentation.food.FoodRecipeScreen(
+                    recipeId = recipeId,
                     onNavigateBack = {
                         navController.popBackStack()
                     }
