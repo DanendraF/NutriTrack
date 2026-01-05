@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	serviceAccountPath = "../serviceAccountKey.json"
+	serviceAccountPath = "serviceAccountKey.json"
 	projectID          = "nutritrack-uiifrl25"
 )
 
