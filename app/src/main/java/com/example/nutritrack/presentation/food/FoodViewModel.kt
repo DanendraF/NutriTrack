@@ -43,10 +43,11 @@ class FoodViewModel(
     }
 
     fun loadAllFoods() {
-        viewModelScope.launch {
-            _foodsState.value = UiState.Loading
+        _foodsState.value = UiState.Loading
 
-            // Try to load from Room first for offline support
+        // Collect local DB in a separate coroutine so it doesn't block
+        // fetching from backend which should run concurrently.
+        viewModelScope.launch {
             foodRepository.getAllFoods()
                 .catch { e ->
                     android.util.Log.e("FoodViewModel", "Failed to load from Room", e)
@@ -56,10 +57,10 @@ class FoodViewModel(
                         _foodsState.value = UiState.Success(localFoods)
                     }
                 }
-
-            // Also fetch from backend to get latest data
-            fetchFoodsFromBackend()
         }
+
+        // Also fetch from backend to get latest data (runs concurrently)
+        fetchFoodsFromBackend()
     }
 
     private fun fetchFoodsFromBackend() {

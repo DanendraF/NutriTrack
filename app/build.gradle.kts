@@ -127,7 +127,7 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // ===== OPENAI API =====
-    implementation("com.aallam.openai:openai-client:3.6.2")
+    implementation("com.aallam.openai:openai-client:3.8.2")
     implementation("io.ktor:ktor-client-android:2.3.7")
 
     // ===== COROUTINES =====
