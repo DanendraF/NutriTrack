@@ -19,6 +19,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import android.util.Base64
+import java.io.ByteArrayOutputStream
+import com.example.nutritrack.data.remote.openai.OpenAIService
+import kotlinx.coroutines.tasks.await
+import android.widget.Toast
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.FirebaseAuth
+import org.koin.androidx.compose.get
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -61,11 +72,19 @@ fun ScanScreen(
     var scanState by remember { mutableStateOf(ScanState.SCANNING) }
     var classificationResult by remember { mutableStateOf<NutriClassifier.Result?>(null) }
     var selectedMealType by remember { mutableStateOf<com.example.nutritrack.domain.model.MealType>(com.example.nutritrack.domain.model.MealType.SNACK) }
+    val searchResults by viewModel.searchResults.collectAsState()
+    var fetchedFoodInfo by remember { mutableStateOf<Food?>(null) }
+    var searchRequested by remember { mutableStateOf(false) }
 
     val foodsState by viewModel.foodsState.collectAsState()
     val allFoods = (foodsState as? com.example.nutritrack.domain.model.UiState.Success<List<Food>>)?.data ?: emptyList()
 
     val classifier = remember { NutriClassifier(context) }
+    val coroutineScope = rememberCoroutineScope()
+    val openAIService = remember { OpenAIService() }
+    val firestore: FirebaseFirestore = get()
+    val firebaseAuth: FirebaseAuth = get()
+    var lastCapturedBase64 by remember { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -89,8 +108,54 @@ fun ScanScreen(
                     if (bitmap != null) {
                         val result = classifier.classify(bitmap)
                         classificationResult = result
-                        capturedBitmap = bitmap
-                        scanState = ScanState.RESULT
+                        // Call OpenAI to analyze nutrition and wait before showing result
+                        coroutineScope.launch {
+                            try {
+                                // convert bitmap to base64
+                                val baos = ByteArrayOutputStream()
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos)
+                                val bytes = baos.toByteArray()
+                                val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                                lastCapturedBase64 = base64
+
+                                val aiResult = openAIService.analyzeFoodImage(base64)
+                                if (aiResult.isSuccess) {
+                                    val resp = aiResult.getOrNull()
+                                    if (resp != null) {
+                                        fetchedFoodInfo = Food(
+                                            foodId = "openai_${resp.name}_${System.currentTimeMillis()}",
+                                            name = resp.name,
+                                            nameIndonesian = resp.nameIndonesian,
+                                            category = resp.category,
+                                            nutrition = com.example.nutritrack.domain.model.NutritionInfo(
+                                                calories = resp.calories,
+                                                protein = resp.protein,
+                                                carbs = resp.carbs,
+                                                fat = resp.fat,
+                                                fiber = resp.fiber,
+                                                sugar = resp.sugar,
+                                                sodium = resp.sodium
+                                            ),
+                                            servingSize = com.example.nutritrack.domain.model.ServingSize(
+                                                amount = 100f,
+                                                unit = "g"
+                                            ),
+                                            barcode = null,
+                                            imageUrl = null,
+                                            isVerified = false,
+                                            source = "openai"
+                                        )
+                                    }
+                                } else {
+                                    android.util.Log.e("ScanScreen", "OpenAI analysis failed: ${aiResult.exceptionOrNull()?.message}")
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("ScanScreen", "Error calling OpenAI", e)
+                            } finally {
+                                capturedBitmap = bitmap
+                                scanState = ScanState.RESULT
+                            }
+                        }
                     } else {
                         scanState = ScanState.SCANNING
                     }
@@ -116,10 +181,27 @@ fun ScanScreen(
         val confidence = classificationResult?.confidence ?: 0
         val label = classificationResult?.label ?: "Unknown"
 
-        // Find food info if confidence > 45%
-        val foodInfo = if (confidence > 45) {
+        // Find local food first if confidence > 45%
+        val localFood = if (confidence > 45) {
             allFoods.find { it.name.equals(label, ignoreCase = true) || it.nameIndonesian?.equals(label, ignoreCase = true) == true }
         } else null
+
+        // If not found locally, trigger backend search once and keep fetched result
+        LaunchedEffect(key1 = Pair(label, confidence)) {
+            if (confidence > 45 && localFood == null && !searchRequested) {
+                viewModel.searchFoods(label)
+                searchRequested = true
+            }
+        }
+
+        // When backend returns results, pick first as fetchedFoodInfo
+        LaunchedEffect(key1 = searchResults) {
+            if (searchRequested && searchResults.isNotEmpty()) {
+                fetchedFoodInfo = searchResults.first()
+            }
+        }
+
+        val foodInfo = localFood ?: fetchedFoodInfo
 
         ScanResultSheet(
             bitmap = capturedBitmap!!,
@@ -129,9 +211,59 @@ fun ScanScreen(
             selectedMealType = selectedMealType,
             onMealTypeChange = { selectedMealType = it },
             onSave = {
+                // Save scan log to Firestore
+                coroutineScope.launch {
+                    try {
+                        val userId = firebaseAuth.currentUser?.uid ?: "anonymous"
+
+                        // Structure: log_scan (collection) -> {userId} (document) -> scans (subcollection) -> {randomId} (document)
+                        val userDocRef = firestore.collection("log_scan").document(userId)
+                        val scansCol = userDocRef.collection("scans")
+                        val newDocRef = scansCol.document()
+                        val scanId = newDocRef.id
+
+                        val data = mapOf<String, Any?>(
+                            "scanId" to scanId,
+                            "userId" to userId,
+                            "timestamp" to System.currentTimeMillis(),
+                            "detectedLabel" to label,
+                            "confidence" to confidence,
+                            "source" to (foodInfo?.source ?: "openai"),
+                            "foodName" to (foodInfo?.name ?: label),
+                            "foodNameIndonesian" to (foodInfo?.nameIndonesian ?: null),
+                            "category" to (foodInfo?.category ?: null),
+                            "nutrition" to if (foodInfo != null) mapOf(
+                                "calories" to foodInfo.nutrition.calories,
+                                "protein" to foodInfo.nutrition.protein,
+                                "carbs" to foodInfo.nutrition.carbs,
+                                "fat" to foodInfo.nutrition.fat,
+                                "fiber" to foodInfo.nutrition.fiber,
+                                "sugar" to foodInfo.nutrition.sugar,
+                                "sodium" to foodInfo.nutrition.sodium
+                            ) else null,
+                            "image_base64" to lastCapturedBase64
+                        )
+
+                        try {
+                            newDocRef.set(data).await()
+                            android.util.Log.d("ScanScreen", "Saved scan log: ${newDocRef.id} under log_scan/$userId/scans")
+                            Toast.makeText(context, "Scan saved", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            android.util.Log.e("ScanScreen", "Failed to save scan log", e)
+                            Toast.makeText(context, "Failed to save scan", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("ScanScreen", "Exception saving scan log", e)
+                    }
+                }
+
                 if (foodInfo != null) {
                     mealViewModel.saveMealFromScan(foodInfo, selectedMealType)
                 }
+
+                // reset states
+                lastCapturedBase64 = null
+                fetchedFoodInfo = null
                 capturedBitmap = null
                 scanState = ScanState.SCANNING
             },
