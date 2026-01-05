@@ -1,16 +1,33 @@
 package com.example.nutritrack
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,41 +37,32 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.nutritrack.domain.model.Tip
-import com.example.nutritrack.domain.model.DailyRecommend
 import com.example.nutritrack.domain.model.Article
+import com.example.nutritrack.domain.model.DailyRecommend
+import com.example.nutritrack.domain.model.Tip
+import com.example.nutritrack.presentation.home.HomeViewModel
 import com.example.nutritrack.presentation.tips.TipsViewModel
-import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
-import com.example.nutritrack.ui.theme.*
+import com.example.nutritrack.ui.theme.BackgroundGray
+import com.example.nutritrack.ui.theme.CardBackground
+import com.example.nutritrack.ui.theme.DarkGreen
+import com.example.nutritrack.ui.theme.LightGreen
+import com.example.nutritrack.ui.theme.TextBlack
+import com.example.nutritrack.ui.theme.TextGray
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun TipsScreen(
     viewModel: TipsViewModel = koinViewModel(),
-    authViewModel: FirebaseAuthViewModel = koinViewModel(),
-    homeViewModel: com.example.nutritrack.presentation.home.HomeViewModel = koinViewModel(),
+    homeViewModel: HomeViewModel = koinViewModel(),
     onNavigateToArticleDetail: (Article) -> Unit = {}
 ) {
     val tips by viewModel.tips.collectAsState()
     val dailyRecommends by viewModel.dailyRecommends.collectAsState()
     val articles by viewModel.articles.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-
     val homeUiState by homeViewModel.uiState.collectAsState()
-
-    // Get user info
-    val userName = "Farrell" // TODO: Get from user profile
-
-    // Calculate progress percentage
-    val progressPercentage = if (homeUiState.targetCalories > 0) {
-        (homeUiState.consumedCalories.toFloat() / homeUiState.targetCalories.toFloat() * 100f)
-    } else {
-        0f
-    }
 
     LazyColumn(
         modifier = Modifier
@@ -63,31 +71,28 @@ fun TipsScreen(
         contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Header with profile
         item {
-            TipsScreenTopBar(
-                userName = userName,
-                consumedCalories = homeUiState.consumedCalories,
-                progressPercentage = progressPercentage
+            HomeTopBar(
+                userName = homeUiState.userName,
+                targetCalories = homeUiState.targetCalories,
+                progressPercentage = homeUiState.progressPercentage.toFloat(),
+                onSyncClick = { homeViewModel.refreshData() },
+                onSettingsClick = { /* TODO */ }
             )
         }
 
-        // Rekomendasi Harian Section
         item {
             RecommendationSection(dailyRecommends)
         }
 
-        // Tips Terbaru Section
         item {
             LatestTipsSection(tips)
         }
 
-        // Untuk Tujuanmu Section
         item {
             GoalSection()
         }
 
-        // Artikel Hidup Sehat Section
         item {
             Text(
                 text = "Artikel Hidup Sehat",
@@ -118,10 +123,12 @@ fun TipsScreen(
 }
 
 @Composable
-private fun TipsScreenTopBar(
+private fun HomeTopBar(
     userName: String,
-    consumedCalories: Int,
-    progressPercentage: Float
+    targetCalories: Int,
+    progressPercentage: Float,
+    onSyncClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -152,12 +159,20 @@ private fun TipsScreenTopBar(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                "$consumedCalories kcal - ${progressPercentage.toInt()}%",
-                fontSize = 12.sp,
+                "Daily Goals: $targetCalories kcal - ${progressPercentage.toInt()}% Done",
+                fontSize = 11.sp,
                 color = TextGray
             )
         }
-        IconButton(onClick = { /* TODO: Navigate to settings */ }) {
+        IconButton(onClick = onSyncClick) {
+            Icon(
+                Icons.Default.Cloud,
+                contentDescription = "Sync",
+                tint = TextGray,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        IconButton(onClick = onSettingsClick) {
             Icon(
                 Icons.Default.Settings,
                 contentDescription = "Settings",
@@ -218,7 +233,6 @@ private fun LatestTipsSection(tips: List<Tip>) {
         )
 
         if (tips.isEmpty()) {
-            // Sample tips if empty
             val sampleTips = listOf(
                 Tip("tip1", "Sarapan tinggi protein", "Pilih sayuran hijau"),
                 Tip("tip2", "Sarapan tinggi protein", "Pilih sayuran hijau"),
@@ -302,7 +316,6 @@ private fun GoalSection() {
             )
         }
 
-        // "Tambah" Button
         OutlinedButton(
             onClick = { /* TODO: Add goal */ },
             modifier = Modifier.fillMaxWidth(),
@@ -375,7 +388,6 @@ private fun ArticleItem(
         onClick = onClick
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Article Image
             AsyncImage(
                 model = article.imageUrl,
                 contentDescription = article.title,
@@ -386,7 +398,6 @@ private fun ArticleItem(
                 contentScale = ContentScale.Crop
             )
 
-            // Article Content
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     article.title,

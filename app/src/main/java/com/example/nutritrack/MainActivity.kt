@@ -105,9 +105,14 @@ class MainActivity : ComponentActivity() {
                         composable("login") {
                             LoginScreen(
                                 onLoginSuccess = {
-                                    // Always go to main app - let HomeViewModel check if user data exists
-                                    // If no data in backend, HomeViewModel will handle it
+                                    // User has data in backend, go to main app
                                     appNavController.navigate(GlobalRoutes.MAIN_APP) {
+                                        popUpTo(GlobalRoutes.AUTH) { inclusive = true }
+                                    }
+                                },
+                                onNavigateToOnboarding = {
+                                    // User logged in but no data in backend, need onboarding
+                                    appNavController.navigate(GlobalRoutes.ONBOARDING) {
                                         popUpTo(GlobalRoutes.AUTH) { inclusive = true }
                                     }
                                 },
@@ -184,12 +189,6 @@ fun MainAppLayout(appNavController: NavHostController) {
                     },
                     onNavigateToCaloriesDetail = {
                         navController.navigate("calories_detail")
-                    },
-                    onNavigateToOnboarding = {
-                        // User data not found in backend, redirect to onboarding
-                        appNavController.navigate(GlobalRoutes.ONBOARDING) {
-                            popUpTo(GlobalRoutes.MAIN_APP) { inclusive = true }
-                        }
                     }
                 )
             }

@@ -101,25 +101,31 @@ fun ScanScreen(
 
     // Handle save meal result
     LaunchedEffect(saveMealState) {
-        when (saveMealState) {
-            is com.example.nutritrack.domain.model.UiState.Success -> {
-                Toast.makeText(context, "✅ Meal saved successfully!", Toast.LENGTH_SHORT).show()
-                android.util.Log.d("ScanScreen", "Meal saved to Firebase: ${(saveMealState as com.example.nutritrack.domain.model.UiState.Success).data}")
-                mealViewModel.resetSaveState()
+        try {
+            when (saveMealState) {
+                is com.example.nutritrack.domain.model.UiState.Success -> {
+                    android.util.Log.d("ScanScreen", "✅ Meal save success callback")
+                    Toast.makeText(context, "✅ Meal saved successfully!", Toast.LENGTH_SHORT).show()
+                    mealViewModel.resetSaveState()
 
-                // Reset scan after successful save
-                lastCapturedBase64 = null
-                fetchedFoodInfo = null
-                capturedBitmap = null
-                scanState = ScanState.SCANNING
+                    // Reset scan after successful save
+                    lastCapturedBase64 = null
+                    fetchedFoodInfo = null
+                    capturedBitmap = null
+                    scanState = ScanState.SCANNING
+                }
+                is com.example.nutritrack.domain.model.UiState.Error -> {
+                    val errorMsg = (saveMealState as com.example.nutritrack.domain.model.UiState.Error).message
+                    android.util.Log.e("ScanScreen", "❌ Meal save error callback: $errorMsg")
+                    Toast.makeText(context, "❌ Failed to save meal: $errorMsg", Toast.LENGTH_LONG).show()
+                    mealViewModel.resetSaveState()
+                }
+                else -> {
+                    // Idle or Loading state, do nothing
+                }
             }
-            is com.example.nutritrack.domain.model.UiState.Error -> {
-                val errorMsg = (saveMealState as com.example.nutritrack.domain.model.UiState.Error).message
-                Toast.makeText(context, "❌ Failed to save meal: $errorMsg", Toast.LENGTH_LONG).show()
-                android.util.Log.e("ScanScreen", "Failed to save meal: $errorMsg")
-                mealViewModel.resetSaveState()
-            }
-            else -> {}
+        } catch (e: Exception) {
+            android.util.Log.e("ScanScreen", "❌ Exception in saveMealState LaunchedEffect", e)
         }
     }
 
@@ -283,18 +289,23 @@ fun ScanScreen(
                 }
 
                 // Save meal to backend (will trigger LaunchedEffect for UI feedback)
-                if (foodInfo != null) {
-                    android.util.Log.d("ScanScreen", "🍽️ Saving meal to backend: ${foodInfo.name}")
-                    mealViewModel.saveMealFromScan(foodInfo, selectedMealType)
-                } else {
-                    android.util.Log.e("ScanScreen", "❌ No food info to save")
-                    Toast.makeText(context, "No food information to save", Toast.LENGTH_SHORT).show()
+                try {
+                    if (foodInfo != null) {
+                        android.util.Log.d("ScanScreen", "🍽️ Saving meal to backend: ${foodInfo.name}")
+                        mealViewModel.saveMealFromScan(foodInfo, selectedMealType)
+                    } else {
+                        android.util.Log.e("ScanScreen", "❌ No food info to save")
+                        Toast.makeText(context, "No food information to save", Toast.LENGTH_SHORT).show()
 
-                    // Reset manually if no food to save
-                    lastCapturedBase64 = null
-                    fetchedFoodInfo = null
-                    capturedBitmap = null
-                    scanState = ScanState.SCANNING
+                        // Reset manually if no food to save
+                        lastCapturedBase64 = null
+                        fetchedFoodInfo = null
+                        capturedBitmap = null
+                        scanState = ScanState.SCANNING
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("ScanScreen", "❌ Exception calling saveMealFromScan", e)
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             },
             onDone = {
@@ -347,17 +358,27 @@ fun AIScannerUI(onImageCaptured: (ImageProxy) -> Unit) {
                 .padding(bottom = 32.dp)
                 .size(80.dp),
             onClick = {
-                imageCapture.takePicture(
-                    executor,
-                    object : ImageCapture.OnImageCapturedCallback() {
-                        override fun onCaptureSuccess(image: ImageProxy) {
-                            onImageCaptured(image)
+                try {
+                    android.util.Log.d("ScanScreen", "📸 Taking picture...")
+                    imageCapture.takePicture(
+                        executor,
+                        object : ImageCapture.OnImageCapturedCallback() {
+                            override fun onCaptureSuccess(image: ImageProxy) {
+                                try {
+                                    android.util.Log.d("ScanScreen", "✅ Picture captured successfully")
+                                    onImageCaptured(image)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("ScanScreen", "❌ Error processing captured image", e)
+                                }
+                            }
+                            override fun onError(exception: ImageCaptureException) {
+                                android.util.Log.e("ScanScreen", "❌ Camera capture error", exception)
+                            }
                         }
-                        override fun onError(exception: ImageCaptureException) {
-                            Log.e("Camera", "Capture error", exception)
-                        }
-                    }
-                )
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.e("ScanScreen", "❌ Exception calling takePicture", e)
+                }
             }
         ) {
             Box(

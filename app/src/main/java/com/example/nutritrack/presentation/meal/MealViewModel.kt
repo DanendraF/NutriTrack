@@ -310,70 +310,82 @@ class MealViewModel(
      * Save meal from scan result
      */
     fun saveMealFromScan(food: com.example.nutritrack.domain.model.Food, mealType: MealType) {
-        // Set food data
-        setFoodFromDatabase(
-            foodId = food.foodId,
-            foodName = food.name,
-            servingSize = "100g",
-            calories = food.nutrition.calories.toInt(),
-            protein = food.nutrition.protein.toInt(),
-            carbs = food.nutrition.carbs.toInt(),
-            fat = food.nutrition.fat.toInt()
-        )
+        try {
+            android.util.Log.d("MealViewModel", "saveMealFromScan called: ${food.name}")
 
-        // Update meal type
-        updateMealType(mealType)
-
-        // Save to backend
-        _saveMealState.value = UiState.Loading
-
-        viewModelScope.launch {
-            // Format date as YYYY-MM-DD
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val currentDate = dateFormat.format(Date())
-
-            // Convert MealType enum to API string format
-            val mealTypeString = when (mealType) {
-                MealType.BREAKFAST -> "breakfast"
-                MealType.LUNCH -> "lunch"
-                MealType.DINNER -> "dinner"
-                MealType.SNACK -> "snack"
-            }
-
-            val nutritionDto = NutritionDto(
-                calories = food.nutrition.calories.toInt(),
-                protein = food.nutrition.protein.toDouble(),
-                carbs = food.nutrition.carbs.toDouble(),
-                fat = food.nutrition.fat.toDouble(),
-                fiber = food.nutrition.fiber.toDouble(),
-                sugar = food.nutrition.sugar.toDouble(),
-                sodium = food.nutrition.sodium.toDouble()
-            )
-
-            android.util.Log.d("MealViewModel", "Saving scanned meal: ${food.name}, type=$mealTypeString")
-
-            apiMealRepository.createMeal(
+            // Set food data
+            setFoodFromDatabase(
                 foodId = food.foodId,
                 foodName = food.name,
-                date = currentDate,
-                mealType = mealTypeString,
-                portion = 1.0,
-                nutrition = nutritionDto
-            ).collect { result ->
-                when (result) {
-                    is Result.Loading -> {
-                        _saveMealState.value = UiState.Loading
+                servingSize = "100g",
+                calories = food.nutrition.calories.toInt(),
+                protein = food.nutrition.protein.toInt(),
+                carbs = food.nutrition.carbs.toInt(),
+                fat = food.nutrition.fat.toInt()
+            )
+
+            // Update meal type
+            updateMealType(mealType)
+
+            // Save to backend
+            _saveMealState.value = UiState.Loading
+
+            viewModelScope.launch {
+                try {
+                    // Format date as YYYY-MM-DD
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val currentDate = dateFormat.format(Date())
+
+                    // Convert MealType enum to API string format
+                    val mealTypeString = when (mealType) {
+                        MealType.BREAKFAST -> "breakfast"
+                        MealType.LUNCH -> "lunch"
+                        MealType.DINNER -> "dinner"
+                        MealType.SNACK -> "snack"
                     }
-                    is Result.Success -> {
-                        android.util.Log.d("MealViewModel", "Scanned meal saved successfully: ${result.data.id}")
-                        _saveMealState.value = UiState.Success(result.data.id)
+
+                    val nutritionDto = NutritionDto(
+                        calories = food.nutrition.calories.toInt(),
+                        protein = food.nutrition.protein.toDouble(),
+                        carbs = food.nutrition.carbs.toDouble(),
+                        fat = food.nutrition.fat.toDouble(),
+                        fiber = food.nutrition.fiber.toDouble(),
+                        sugar = food.nutrition.sugar.toDouble(),
+                        sodium = food.nutrition.sodium.toDouble()
+                    )
+
+                    android.util.Log.d("MealViewModel", "Saving scanned meal: ${food.name}, type=$mealTypeString")
+
+                    apiMealRepository.createMeal(
+                        foodId = food.foodId,
+                        foodName = food.name,
+                        date = currentDate,
+                        mealType = mealTypeString,
+                        portion = 1.0,
+                        nutrition = nutritionDto
+                    ).collect { result ->
+                        when (result) {
+                            is Result.Loading -> {
+                                _saveMealState.value = UiState.Loading
+                            }
+                            is Result.Success -> {
+                                android.util.Log.d("MealViewModel", "Scanned meal saved successfully: ${result.data.id}")
+                                _saveMealState.value = UiState.Success(result.data.id)
+                            }
+                            is Result.Error -> {
+                                android.util.Log.e("MealViewModel", "Failed to save scanned meal: ${result.message}")
+                                _saveMealState.value = UiState.Error(result.message)
+                            }
+                        }
                     }
-                    is Result.Error -> {
-                        android.util.Log.e("MealViewModel", "Failed to save scanned meal: ${result.message}")
-                        _saveMealState.value = UiState.Error(result.message)
-                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MealViewModel", "Exception in saveMealFromScan coroutine", e)
+                    _saveMealState.value = UiState.Error("Failed to save meal: ${e.message}")
                 }
             }
+        } catch (e: Exception) {
+            android.util.Log.e("MealViewModel", "Exception in saveMealFromScan", e)
+            _saveMealState.value = UiState.Error("Failed to save meal: ${e.message}")
         }
     }
 }

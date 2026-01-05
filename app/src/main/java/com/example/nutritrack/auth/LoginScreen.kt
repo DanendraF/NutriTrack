@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import com.example.nutritrack.domain.model.UiState
@@ -34,6 +35,7 @@ import com.example.nutritrack.ui.theme.TextGray
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
+    onNavigateToOnboarding: () -> Unit,
     viewModel: FirebaseAuthViewModel = koinViewModel()
 ) {
     val authState by viewModel.authState.collectAsState()
@@ -41,12 +43,34 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var passwordVisible by remember { mutableStateOf(false) }
 
+    val apiUserRepository: com.example.nutritrack.data.repository.ApiUserRepository = koinInject()
+    val coroutineScope = rememberCoroutineScope()
+
     LaunchedEffect(loginState) {
         when (loginState) {
             is UiState.Success -> {
-                android.util.Log.d("LoginScreen", "✅ Login successful!")
+                android.util.Log.d("LoginScreen", "✅ Login successful! Checking user data...")
                 viewModel.resetLoginState()
-                onLoginSuccess()
+
+                // Check if user has completed onboarding by fetching from backend
+                coroutineScope.launch {
+                    apiUserRepository.getCurrentUser().collect { result ->
+                        when (result) {
+                            is com.example.nutritrack.data.remote.Result.Success -> {
+                                android.util.Log.d("LoginScreen", "✅ User data found in backend, navigating to main app")
+                                onLoginSuccess()
+                            }
+                            is com.example.nutritrack.data.remote.Result.Error -> {
+                                // User not found in backend, need onboarding
+                                android.util.Log.d("LoginScreen", "⚠️ User data not found (${result.message}), navigating to onboarding")
+                                onNavigateToOnboarding()
+                            }
+                            else -> {
+                                // Still loading, wait
+                            }
+                        }
+                    }
+                }
             }
             is UiState.Error -> {
                 snackbarHostState.showSnackbar(
@@ -199,6 +223,10 @@ fun LoginScreen(
 @Composable
 fun LoginScreenPreview() {
     NutriTrackTheme {
-        LoginScreen(onLoginSuccess = {}, onNavigateToRegister = {})
+        LoginScreen(
+            onLoginSuccess = {},
+            onNavigateToRegister = {},
+            onNavigateToOnboarding = {}
+        )
     }
 }

@@ -26,6 +26,7 @@ import com.example.nutritrack.presentation.auth.FirebaseAuthViewModel
 import com.example.nutritrack.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.nutritrack.presentation.home.HomeViewModel
 
 @Composable
 fun FoodScreen(
@@ -34,14 +35,12 @@ fun FoodScreen(
     onNavigateToCategory: (String) -> Unit = {},
     onNavigateToRecipe: (String) -> Unit = {},
     authViewModel: FirebaseAuthViewModel = koinViewModel(),
-    foodHistoryViewModel: FoodHistoryViewModel = koinViewModel()
+    foodHistoryViewModel: FoodHistoryViewModel = koinViewModel(),
+    homeViewModel: HomeViewModel = koinViewModel()
 ) {
     val recentMeals by foodHistoryViewModel.recentMeals.collectAsStateWithLifecycle()
     val historyLoading by foodHistoryViewModel.isLoading.collectAsStateWithLifecycle()
-
-    // Get user info
-    val currentUserId = authViewModel.getCurrentUserId()
-    val userName = "Farrell" // TODO: Get from user profile
+    val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         foodHistoryViewModel.loadRecentMeals()
@@ -54,9 +53,14 @@ fun FoodScreen(
         contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // Header
         item {
-            FoodScreenTopBar(userName = userName)
+            HomeTopBar(
+                userName = homeUiState.userName,
+                targetCalories = homeUiState.targetCalories,
+                progressPercentage = homeUiState.progressPercentage.toFloat(),
+                onSyncClick = { homeViewModel.refreshData() },
+                onSettingsClick = { /* TODO */ }
+            )
         }
 
         // Food History Section
@@ -65,8 +69,7 @@ fun FoodScreen(
                 recentMeals = recentMeals,
                 isLoading = historyLoading,
                 onViewAll = onNavigateToFoodHistory,
-                onMealClick = { meal ->
-                    // Navigate to detail
+                onMealClick = {
                     onNavigateToFoodHistory()
                 }
             )
@@ -83,12 +86,17 @@ fun FoodScreen(
 }
 
 @Composable
-private fun FoodScreenTopBar(userName: String) {
+private fun HomeTopBar(
+    userName: String,
+    targetCalories: Int,
+    progressPercentage: Float,
+    onSyncClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Profile Picture Circle
         Box(
             modifier = Modifier
                 .size(52.dp)
@@ -111,16 +119,22 @@ private fun FoodScreenTopBar(userName: String) {
                 fontWeight = FontWeight.Bold,
                 color = TextBlack
             )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                "Daily Goals: $targetCalories kcal - ${progressPercentage.toInt()}% Done",
+                fontSize = 11.sp,
+                color = TextGray
+            )
         }
-        IconButton(onClick = { /* TODO: Search */ }) {
+        IconButton(onClick = onSyncClick) {
             Icon(
-                Icons.Default.Search,
-                contentDescription = "Search",
+                Icons.Default.Cloud,
+                contentDescription = "Sync",
                 tint = TextGray,
                 modifier = Modifier.size(22.dp)
             )
         }
-        IconButton(onClick = { /* TODO: Settings */ }) {
+        IconButton(onClick = onSettingsClick) {
             Icon(
                 Icons.Default.Settings,
                 contentDescription = "Settings",

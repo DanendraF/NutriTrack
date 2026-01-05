@@ -42,7 +42,6 @@ import java.util.*
 fun HomeScreen(
     onNavigateToAddMeal: () -> Unit = {},
     onNavigateToCaloriesDetail: () -> Unit = {},
-    onNavigateToOnboarding: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
     authViewModel: FirebaseAuthViewModel = koinViewModel(),
     mealViewModel: MealViewModel = koinViewModel()
@@ -52,17 +51,16 @@ fun HomeScreen(
     val deleteMealState by mealViewModel.deleteMealState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Check if user data exists, if not redirect to onboarding
+    // Note: User data check is now done in LoginScreen before reaching here
+    // If user reaches HomeScreen, they should have data
+    // But we keep this as safety check in case of edge cases
     LaunchedEffect(userState) {
         when (userState) {
             is com.example.nutritrack.domain.model.UiState.Error -> {
                 val errorMsg = (userState as com.example.nutritrack.domain.model.UiState.Error).message
-                // If user not found (404), redirect to onboarding
-                if (errorMsg.contains("not found", ignoreCase = true) ||
-                    errorMsg.contains("404", ignoreCase = true)) {
-                    android.util.Log.d("HomeScreen", "⚠️ User data not found, redirecting to onboarding...")
-                    onNavigateToOnboarding()
-                }
+                android.util.Log.e("HomeScreen", "⚠️ Error loading user data: $errorMsg")
+                // Don't redirect to onboarding here - user should already have data
+                // This might be a network error or other issue
             }
             else -> {}
         }
