@@ -98,13 +98,8 @@ class MainActivity : ComponentActivity() {
                     composable(GlobalRoutes.SPLASH) {
                         SplashScreen(
                             onSplashFinished = {
-                                // After splash, check login state
-                                val destination = if (authPreferences.isLoggedIn()) {
-                                    GlobalRoutes.MAIN_APP
-                                } else {
-                                    GlobalRoutes.AUTH
-                                }
-                                appNavController.navigate(destination) {
+                                // Always navigate to auth to force login
+                                appNavController.navigate(GlobalRoutes.AUTH) {
                                     popUpTo(GlobalRoutes.SPLASH) { inclusive = true }
                                 }
                             }
@@ -117,17 +112,10 @@ class MainActivity : ComponentActivity() {
                         composable("login") {
                             LoginScreen(
                                 onLoginSuccess = {
-                                    // Check if user has completed onboarding before
-                                    if (authPreferences.hasCompletedOnboarding()) {
-                                        // Skip onboarding, go directly to main app
-                                        appNavController.navigate(GlobalRoutes.MAIN_APP) {
-                                            popUpTo(GlobalRoutes.AUTH) { inclusive = true }
-                                        }
-                                    } else {
-                                        // First time user, go to onboarding
-                                        appNavController.navigate(GlobalRoutes.ONBOARDING) {
-                                            popUpTo(GlobalRoutes.AUTH) { inclusive = true }
-                                        }
+                                    // Always go to main app - let HomeViewModel check if user data exists
+                                    // If no data in backend, HomeViewModel will handle it
+                                    appNavController.navigate(GlobalRoutes.MAIN_APP) {
+                                        popUpTo(GlobalRoutes.AUTH) { inclusive = true }
                                     }
                                 },
                                 onNavigateToRegister = { appNavController.navigate("register") }
@@ -174,6 +162,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        authPreferences.clearLoginState()
     }
 }
 
@@ -238,6 +231,12 @@ fun MainAppLayout(appNavController: NavHostController) {
                     },
                     onNavigateToCaloriesDetail = {
                         navController.navigate("calories_detail")
+                    },
+                    onNavigateToOnboarding = {
+                        // User data not found in backend, redirect to onboarding
+                        appNavController.navigate(GlobalRoutes.ONBOARDING) {
+                            popUpTo(GlobalRoutes.MAIN_APP) { inclusive = true }
+                        }
                     }
                 )
             }

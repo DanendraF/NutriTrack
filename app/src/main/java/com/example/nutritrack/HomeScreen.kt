@@ -42,13 +42,31 @@ import java.util.*
 fun HomeScreen(
     onNavigateToAddMeal: () -> Unit = {},
     onNavigateToCaloriesDetail: () -> Unit = {},
+    onNavigateToOnboarding: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
     authViewModel: FirebaseAuthViewModel = koinViewModel(),
     mealViewModel: MealViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val userState by viewModel.userState.collectAsStateWithLifecycle()
     val deleteMealState by mealViewModel.deleteMealState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Check if user data exists, if not redirect to onboarding
+    LaunchedEffect(userState) {
+        when (userState) {
+            is com.example.nutritrack.domain.model.UiState.Error -> {
+                val errorMsg = (userState as com.example.nutritrack.domain.model.UiState.Error).message
+                // If user not found (404), redirect to onboarding
+                if (errorMsg.contains("not found", ignoreCase = true) ||
+                    errorMsg.contains("404", ignoreCase = true)) {
+                    android.util.Log.d("HomeScreen", "⚠️ User data not found, redirecting to onboarding...")
+                    onNavigateToOnboarding()
+                }
+            }
+            else -> {}
+        }
+    }
 
     // Initialize userId and refresh on every screen appearance
     LaunchedEffect(key1 = Unit) {

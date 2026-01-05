@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.nutritrack.data.remote.Result
 import com.example.nutritrack.data.repository.ApiMealRepository
 import com.example.nutritrack.data.repository.ApiUserRepository
-import com.example.nutritrack.data.repository.FirestoreMealRepository
 import com.example.nutritrack.data.repository.UserRepository
 import com.example.nutritrack.domain.model.Meal
 import com.example.nutritrack.domain.model.MealType
@@ -42,9 +41,9 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val userRepository: UserRepository,
-    private val firestoreMealRepository: FirestoreMealRepository,
     private val apiMealRepository: ApiMealRepository,
-    private val apiUserRepository: ApiUserRepository
+    private val apiUserRepository: ApiUserRepository,
+    private val authPreferences: com.example.nutritrack.data.local.preferences.AuthPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -126,8 +125,12 @@ class HomeViewModel(
                                     )
                                 }
 
+                                // Mark onboarding as completed since user data exists in backend
+                                authPreferences.setOnboardingCompleted(true)
+
                                 android.util.Log.d("HomeViewModel", "✅ User data synced to state: targetCalories=${user.targetCalories}")
                                 android.util.Log.d("HomeViewModel", "✅ UI State updated with calories: ${_uiState.value.targetCalories}")
+                                android.util.Log.d("HomeViewModel", "✅ Onboarding marked as completed")
                             }
                         }
                         is Result.Error -> {
@@ -250,45 +253,15 @@ class HomeViewModel(
                         is Result.Error -> {
                             android.util.Log.e("HomeViewModel", "ERROR loading daily log: ${result.message}")
 
-                            // Fallback to Firestore/Room
-                            loadTodayMealsFromLocal(userId)
+                            // Show error state - no fallback to Firestore
+                            // Data should always come from backend API
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    error = "Failed to load meals from server: ${result.message}"
+                                )
+                            }
                         }
-                    }
-                }
-        }
-    }
-
-    private fun loadTodayMealsFromLocal(userId: String) {
-        viewModelScope.launch {
-            android.util.Log.d("HomeViewModel", "Falling back to local data...")
-
-            firestoreMealRepository.getTodaysMeals(userId)
-                .catch { e: Throwable ->
-                    android.util.Log.e("HomeViewModel", "Local fetch also failed", e)
-                    _uiState.update { it.copy(isLoading = false, error = "Failed to load meals") }
-                }
-                .collect { meals: List<Meal> ->
-                    val totalCalories = meals.sumOf { meal -> meal.calories }
-                    val totalProtein = meals.sumOf { meal -> meal.protein }
-                    val totalCarbs = meals.sumOf { meal -> meal.carbs }
-                    val totalFat = meals.sumOf { meal -> meal.fat }
-
-                    _uiState.update { state ->
-                        val remaining = (state.targetCalories - totalCalories).coerceAtLeast(0)
-                        val progress = if (state.targetCalories > 0) {
-                            ((totalCalories.toFloat() / state.targetCalories) * 100).toInt().coerceAtMost(100)
-                        } else 0
-
-                        state.copy(
-                            consumedCalories = totalCalories,
-                            consumedProtein = totalProtein,
-                            consumedCarbs = totalCarbs,
-                            consumedFat = totalFat,
-                            remainingCalories = remaining,
-                            progressPercentage = progress,
-                            todayMeals = meals,
-                            isLoading = false
-                        )
                     }
                 }
         }

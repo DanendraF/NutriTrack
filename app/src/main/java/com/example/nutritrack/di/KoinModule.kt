@@ -76,7 +76,7 @@ val appModule = module {
     // Retrofit
     single {
         Retrofit.Builder()
-            .baseUrl("http://192.168.3.110:8080/")
+            .baseUrl("http://172.20.10.3:8080/")
             .client(get())
             .addConverterFactory(GsonConverterFactory.create(get()))
             .build()
@@ -121,7 +121,7 @@ val appModule = module {
     viewModel { AuthViewModel() }
     viewModel { FirebaseAuthViewModel(get(), get()) } // Added AuthPreferences
     viewModel { OnboardingViewModel(get(), get(), get()) }
-    viewModel { HomeViewModel(get(), get(), get(), get()) } // Added ApiMealRepository + ApiUserRepository
+    viewModel { HomeViewModel(get(), get(), get(), get()) } // UserRepository + ApiMealRepository + ApiUserRepository + AuthPreferences (removed FirestoreMealRepository)
     viewModel { FoodViewModel(get(), get()) } // Added ApiFoodRepository
     viewModel { UserSavedFoodViewModel(get(), get()) } // UserSavedFoodRepository + FirebaseAuth
     viewModel { com.example.nutritrack.presentation.food.FoodHistoryViewModel(get()) }
